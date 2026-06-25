@@ -2,6 +2,8 @@
   "name": "@paleproton/gfy",
   "version": "0.1.0",
   "description": "A terminal UI client for gfy.com (the GFY Webmaster Board vBulletin forum)",
+  "author": "paleproton",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/drfarang/gfy.git"
@@ -18,7 +20,8 @@
   "files": [
     "src",
     "tsconfig.json",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "bun": ">=1.1.0"

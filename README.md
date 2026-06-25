@@ -123,3 +123,7 @@ bun run smoke forums      # or: login | threads | thread | compose
 
 bun run typecheck
 ```
+
+## License
+
+[MIT](LICENSE) © paleproton
