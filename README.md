@@ -1,0 +1,125 @@
+# gfy
+
+A terminal client for **gfy.com** (the "GFY Webmaster Board"), built with [OpenTUI](https://github.com/anomalyco/opentui) + React on Bun.
+
+gfy.com runs **vBulletin 3.8.8** (no public API), so this app talks to it the way a browser does: it logs in, fetches pages over HTTP, and parses the HTML. Because vB 3.8 is frozen, the markup is stable and predictable.
+
+## What it does
+
+- Sign in with username/password, or by importing your browser session cookies
+- Browse the forum list
+- List threads in a forum (paginated)
+- Read a thread (paginated, scrollable, with post bodies rendered to readable text)
+- Reply to a thread
+- Start a new thread
+- Persists your session so you stay logged in between runs
+
+## Requirements
+
+- [Bun](https://bun.sh) (OpenTUI is Bun-only right now). Install with:
+  ```sh
+  curl -fsSL https://bun.sh/install | bash
+  ```
+- A real terminal (it's a full-screen TUI).
+
+## Install & run
+
+Requires [Bun](https://bun.sh) (OpenTUI is Bun-only). Run it without installing:
+
+```sh
+bunx @paleproton/gfy
+```
+
+Or install the `gfy` command globally:
+
+```sh
+bun install -g @paleproton/gfy
+gfy
+```
+
+The platform-specific native bits (`@opentui/core-*`, `sharp`) resolve automatically for your OS/arch.
+
+### From source (development)
+
+```sh
+bun install
+bun start          # or: bun run dev   (auto-reload while editing)
+```
+
+## Signing in
+
+Two ways, switchable on the login screen with **Ctrl+K**:
+
+1. **Password** - type your GFY username and password. Note the password is shown as you type (no masking yet).
+2. **Cookie import** - paste your logged-in browser cookies. This never handles your password and is the most reliable option if Cloudflare ever challenges an automated login.
+
+   To get the cookies: open gfy.com in your browser while logged in, open DevTools -> **Application/Storage -> Cookies -> https://www.gfy.com**, and copy the values into one string:
+   ```
+   bbuserid=123456; bbpassword=abcdef0123456789...; bbsessionhash=...
+   ```
+   (`bbpassword` and `bbsessionhash` are HttpOnly, so they won't appear in `document.cookie` - read them from the DevTools cookie panel.)
+
+## Keybindings
+
+| Context        | Keys |
+| -------------- | ---- |
+| Lists          | `j`/`k` or arrows move · `enter`/`→` open · `←`/`esc`/`backspace` back · `g`/`G` top/bottom · `PgUp`/`PgDn` page |
+| Forums         | `enter` open · `r` refresh · `o` sign out · `q` quit |
+| Thread list    | `enter` open · `n`/`p` next/prev page · `c` new thread · `r` refresh · `←` back |
+| Thread view    | `↑`/`↓` scroll · `n`/`p` next/prev page · `r` reply · `q` back |
+| Compose        | `Ctrl+S` send · `Esc` cancel · `Tab` switch subject/body (new thread) |
+| Anywhere       | `Ctrl+C` quit |
+
+## Config & data
+
+Stored under `~/.config/gfytui/` (override the directory with `GFYTUI_DIR`):
+
+- `session.json` - your saved session cookies (written with `0600` permissions; no password is stored).
+- `config.json` - optional overrides: `baseUrl`, `userAgent`, `requestDelayMs`, `editor`.
+
+Requests are throttled (default 800ms apart) to stay polite to the server.
+
+## How it works
+
+```
+src/
+  vb/              vBulletin client (pure, no UI - independently testable)
+    http.ts        fetch wrapper: browser-like headers, cookie jar, latin1 decode,
+                   manual redirect following (vB sets auth cookies on a 302),
+                   Cloudflare-challenge detection
+    cookies.ts     minimal cookie jar
+    parse.ts       cheerio parsers: forums, thread lists, posts, pagination, post tokens
+    auth.ts        login / cookie-import / verify
+    client.ts      high-level API: forums(), threads(), thread(), reply(), newThread()
+  ui/              OpenTUI React UI
+    App.tsx        screen-stack router + session bootstrap + global quit
+    screens/       Login, ForumList, ThreadList, ThreadView, Compose
+    components/    List (keyboard-driven, windowed), header/status/loading/error
+  config.ts        config + session persistence
+```
+
+## Caveats
+
+- **Terms of service.** Automated access may be discouraged by the forum. This is a personal client for your own account; it throttles requests and sends a normal User-Agent. Use it responsibly.
+- **Cloudflare.** The site is behind Cloudflare. GETs and the login POST currently pass through with a normal User-Agent. If that ever changes, use the cookie-import login.
+- **Scraping is markup-coupled.** Parsers target vB 3.8.8's templates. They're defensive, but a forum-side template change could require selector tweaks (`src/vb/parse.ts`).
+- **Password masking** isn't implemented on the login screen yet - prefer cookie import if that matters to you.
+
+## Development
+
+Throwaway harnesses that hit the live site live in `scripts/`:
+
+```sh
+# Exercise the vBulletin layer and save HTML fixtures to ./scratch (or $GFYTUI_FIXTURES)
+bun run probe http
+bun run probe parse
+bun run probe client                     # browse as guest
+GFY_USER=.. GFY_PASS=.. bun run probe client
+GFY_COOKIES="bbuserid=..; bbpassword=.." bun run probe client
+bun run probe tokens <threadId>          # dry-run: scrape reply-form tokens, no post
+
+# Render a single screen for a few seconds (uses real guest data), then exit
+bun run smoke forums      # or: login | threads | thread | compose
+
+bun run typecheck
+```

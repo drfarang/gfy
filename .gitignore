@@ -1,0 +1,28 @@
+# dependencies (bun install)
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# logs
+logs
+*.log
+
+# dotenv environment variable files
+.env
+.env.local
+
+# caches
+.cache
+*.tsbuildinfo
+
+# editors / OS
+.idea
+.vscode
+.DS_Store
+
+# local scratch / scraped HTML fixtures
+*.local.html
+scratch/
