@@ -125,6 +125,20 @@ bun run typecheck
 bun test                                 # parser/bbcode unit tests (test/)
 ```
 
+### Releasing
+
+Typecheck + tests run on every push/PR (`.github/workflows/ci.yml`). Pushing a
+version tag publishes to npm (`.github/workflows/publish.yml`):
+
+```sh
+npm version patch          # 0.1.0 -> 0.1.1: edits package.json, makes tag v0.1.1
+git push --follow-tags     # pushes the commit + tag, which triggers the publish
+```
+
+The publish workflow needs a repo secret `NPM_TOKEN` (a granular npm automation
+token with publish access and 2FA bypass). It re-runs typecheck/tests, checks the
+tag matches `package.json`, then `npm publish`es.
+
 ## License
 
 [MIT](LICENSE) © paleproton

@@ -1,0 +1,55 @@
+name: Publish
+
+# Publishes @paleproton/gfy to npm when a version tag is pushed, e.g.
+#   npm version patch        # 0.1.0 -> 0.1.1, edits package.json + makes tag v0.1.1
+#   git push --follow-tags   # pushes the commit and the tag -> triggers this
+#
+# Requires a repo secret NPM_TOKEN: a granular npm automation token with
+# publish access to @paleproton/gfy and "bypass 2FA" enabled
+# (npmjs.com -> Access Tokens -> Generate New Token -> Granular / Automation).
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance attestation
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # setup-node writes the registry auth into ~/.npmrc for `npm publish`.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+      - name: Verify tag matches package.json version
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          TAG=${GITHUB_REF_NAME#v}
+          if [ "$PKG" != "$TAG" ]; then
+            echo "Tag $TAG does not match package.json version $PKG" >&2
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
