@@ -1,0 +1,54 @@
+<!--
+  Synthetic vBulletin 3.8 / vBSEO forumdisplay page (invented content).
+  Exercises parseThreadList: a[id=thread_title_NN], following td columns
+  (author/replies/views/lastpost), sticky detection, pagination, forumId.
+-->
+<html>
+<head><title>General Chat - Example Board</title></head>
+<body>
+
+<div class="pagenav">Page 1 of 3</div>
+
+<table id="threadslist">
+  <tbody id="threadbits_forum_26">
+    <!-- Sticky thread -->
+    <tr>
+      <td class="alt1" id="td_threadstatusicon_1001">
+        <img src="skins/gfy/images/statusicon/thread.gif" alt="" border="" />
+      </td>
+      <td class="alt2" align="center"><img src="/images/icons/icon1.gif" border="0" /></td>
+      <td class="alt1Active" id="td_threadtitle_1001" title="Rules of the road">
+        <div>
+          <span style="float:right"><img class="inlineimg" src="images/misc/sticky.gif" alt="Sticky Thread" /></span>
+          Pinned:
+          <a href="http://example.test/general-chat/1001-rules-of-the-road.html" id="thread_title_1001"><strong>Rules of the Road</strong></a>
+        </div>
+        <div class="smallfont"></div>
+      </td>
+      <td class="alt2"><span onclick="window.open('member.php?u=1')">AdminGuy</span></td>
+      <td class="alt1" align="center"><a href="#">12</a></td>
+      <td class="alt2" align="center">3,400</td>
+      <td class="alt1"><div class="smallfont">06-24-2026 09:00 AM by AdminGuy</div></td>
+    </tr>
+    <!-- Normal thread -->
+    <tr>
+      <td class="alt1" id="td_threadstatusicon_1002">
+        <img src="skins/gfy/images/statusicon/thread.gif" alt="" border="" />
+      </td>
+      <td class="alt2" align="center"><img src="/images/icons/icon1.gif" border="0" /></td>
+      <td class="alt1Active" id="td_threadtitle_1002" title="Hello world">
+        <div>
+          <a href="http://example.test/general-chat/1002-hello-world-thread.html" id="thread_title_1002"><strong>Hello World &amp; Friends</strong></a>
+        </div>
+        <div class="smallfont"></div>
+      </td>
+      <td class="alt2"><span onclick="window.open('member.php?u=2')">RegularJoe</span></td>
+      <td class="alt1" align="center"><a href="#">5</a></td>
+      <td class="alt2" align="center">1,234</td>
+      <td class="alt1"><div class="smallfont">06-23-2026 11:30 PM by LastPoster</div></td>
+    </tr>
+  </tbody>
+</table>
+
+</body>
+</html>

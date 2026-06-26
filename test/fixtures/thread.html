@@ -1,0 +1,68 @@
+<!--
+  Synthetic vBulletin 3.8 / vBSEO showthread page (invented content).
+  Exercises parseThread: table[id=postNN] + #post_message_NN, a.bigusername
+  author, .thead date + "#&nbsp;1" index, htmlToText body (links, inline image,
+  quote block -> "NAME wrote:" + "> " lines), pagination, threadId from hidden t.
+-->
+<html>
+<head><title>Hello World &amp; Friends - Example Board</title></head>
+<body>
+
+<input type="hidden" name="t" value="1002" />
+
+<div class="pagenav">Page 2 of 5</div>
+
+<!-- First post -->
+<table id="post23383510" class="tborder" cellpadding="6" cellspacing="0" border="0" width="100%" align="center">
+  <tr>
+    <td class="thead">07-09-2025, 07:06 AM</td>
+    <td class="thead" align="right">&nbsp; #&nbsp;1</td>
+  </tr>
+  <tr>
+    <td class="alt2">
+      <a class="bigusername" href="http://example.test/members/regularjoe/"><span style="color:#37E04B">RegularJoe</span></a>
+    </td>
+    <td class="alt1">
+      <div id="post_message_23383510">
+        Hello everyone, check out <a href="http://example.test/cool-page?s=ffffffffffffffffffffffffffffffff">this link</a>.<br />
+        Here is an image:<br />
+        <img src="http://img.example.test/photo.jpg" border="0" alt="" />
+      </div>
+    </td>
+  </tr>
+</table>
+
+<!-- Second post with a quote of the first -->
+<table id="post23383511" class="tborder" cellpadding="6" cellspacing="0" border="0" width="100%" align="center">
+  <tr>
+    <td class="thead">07-09-2025, 08:15 AM</td>
+    <td class="thead" align="right">&nbsp; #&nbsp;2</td>
+  </tr>
+  <tr>
+    <td class="alt2">
+      <a class="bigusername" href="http://example.test/members/replyguy/"><span style="color:#7aa2f7">ReplyGuy</span></a>
+    </td>
+    <td class="alt1">
+      <div id="post_message_23383511">
+        <div style="margin:20px; margin-top:5px;">
+          <div class="smallfont" style="margin-bottom:2px">Quote:</div>
+          <table cellpadding="6" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td class="alt2" style="border:1px inset">
+                <div>
+                  Originally Posted by <strong>RegularJoe</strong>
+                  <a href="http://example.test/general-chat/1002-hello-world-thread-post1.html#post1" rel="nofollow"><img class="inlineimg" src="skins/gfy/images/buttons/viewpost.gif" border="0" alt="View Post" /></a>
+                </div>
+                <div style="font-style:italic">Hello everyone, check out this link.</div>
+              </td>
+            </tr>
+          </table>
+        </div>
+        Welcome aboard!
+      </div>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

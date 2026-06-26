@@ -1,0 +1,52 @@
+<!--
+  Synthetic vBulletin 3.8 / vBSEO forum index, modelled on gfy.com markup but
+  with invented forum names/content (no real scraped data). Exercises:
+  parseForums (td[id=fNN], category thead, .smallfont description),
+  parseLoggedInUsername (Welcome / bigusername), parseSecurityToken.
+-->
+<html>
+<head><title>Example Board - Powered by vBulletin</title></head>
+<body>
+<script type="text/javascript">
+  var SECURITYTOKEN = "1700000000-abc123def456";
+</script>
+
+<div id="header">
+  Welcome, <b><a href="member.php?u=42">TestUser</a></b>
+  (<a href="login.php?do=logout&amp;logouthash=1700000000-abc">Log Out</a>)
+</div>
+
+<table class="tborder" cellpadding="6" cellspacing="1" border="0" width="100%">
+  <thead>
+    <tr><td class="thead" colspan="2">Status</td><td class="thead">Forum</td>
+        <td class="thead">Last Post</td><td class="thead">Threads</td><td class="thead">Posts</td></tr>
+  </thead>
+  <tbody>
+    <tr><td class="thead" colspan="6">General Categories</td></tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="alt2"><img src="skins/gfy/images/statusicon/forum_old.gif" alt="" border="0" /></td>
+      <td class="alt1Active" align="left" id="f26">
+        <div><a href="http://example.test/general-chat/?s=0000000000000000000000000000abcd"><strong>General Chat</strong></a></div>
+        <div class="smallfont">Talk about whatever &amp; whichever. One-time &quot;announcements&quot; allowed.</div>
+      </td>
+      <td class="alt2"><div class="smallfont">06-24-2026 by Someone</div></td>
+      <td class="alt1" align="center">1,234</td>
+      <td class="alt2" align="center">56,789</td>
+    </tr>
+    <tr>
+      <td class="alt2"><img src="skins/gfy/images/statusicon/forum_new.gif" alt="" border="0" /></td>
+      <td class="alt1Active" align="left" id="f7">
+        <div><a href="http://example.test/buy-sell/?s=0000000000000000000000000000abcd"><strong>Buy &amp; Sell</strong></a></div>
+        <div class="smallfont">Marketplace forum.</div>
+      </td>
+      <td class="alt2"><div class="smallfont">06-23-2026 by Trader</div></td>
+      <td class="alt1" align="center">99</td>
+      <td class="alt2" align="center">420</td>
+    </tr>
+  </tbody>
+</table>
+
+</body>
+</html>

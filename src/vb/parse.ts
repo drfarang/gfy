@@ -166,7 +166,8 @@ export function parseThread(html: string): Paged<Post> {
     const date = clean(theads.first().text()) || undefined;
     let index: number | undefined;
     theads.each((_, th) => {
-      const m = clean($(th).text()).match(/#(\d+)/);
+      // vBSEO renders the post number as "#&nbsp;1", so allow space after '#'.
+      const m = clean($(th).text()).match(/#\s*(\d+)/);
       if (m?.[1]) index = Number(m[1]);
     });
 
