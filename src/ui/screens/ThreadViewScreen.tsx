@@ -101,9 +101,12 @@ export function ThreadViewScreen({
   onBack: () => void;
 }) {
   const { cols } = useDimensions();
-  const [page, setPage] = useState(1);
+  // Open on the last page ("last" lets vBulletin resolve which page that is);
+  // once loaded we track the real page number for n/p navigation.
+  const [page, setPage] = useState<number | "last">("last");
   const { data, loading, error } = useAsync(() => client.thread(threadId, page), [threadId, page]);
   const totalPages = data?.totalPages ?? 1;
+  const currentPage = data?.page ?? (typeof page === "number" ? page : 1);
 
   // Live viewport rect so inline Kitty images crop to the scroll area.
   const scrollRef = useRef<ScrollBoxRenderable>(null);
@@ -127,14 +130,14 @@ export function ThreadViewScreen({
     const n = String(key.name);
     if (n === "r") {
       if (username) onReply();
-    } else if (n === "n") setPage((p) => Math.min(totalPages, p + 1));
-    else if (n === "p") setPage((p) => Math.max(1, p - 1));
+    } else if (n === "n") setPage(Math.min(totalPages, currentPage + 1));
+    else if (n === "p") setPage(Math.max(1, currentPage - 1));
     else if (n === "q" || n === "escape" || n === "backspace") onBack();
   });
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1 }}>
-      <Header title={truncate(title, Math.max(10, cols - 14))} right={`page ${page}/${totalPages}`} />
+      <Header title={truncate(title, Math.max(10, cols - 14))} right={`page ${currentPage}/${totalPages}`} />
       {loading ? (
         <Loading label="Loading thread..." />
       ) : error ? (

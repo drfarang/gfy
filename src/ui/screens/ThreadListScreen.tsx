@@ -42,7 +42,7 @@ export function ThreadListScreen({
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1 }}>
-      <Header title={"GFY  ·  " + truncate(title, Math.max(10, cols - 16))} right={`page ${page}/${totalPages}`} />
+      <Header title={"GFY  ·  " + truncate(data?.title || title || "Forum", Math.max(10, cols - 16))} right={`page ${page}/${totalPages}`} />
       {loading ? (
         <Loading label="Loading threads..." />
       ) : error ? (

@@ -68,14 +68,14 @@ Two ways, switchable on the login screen with **Ctrl+K**:
 | Thread list    | `enter` open · `n`/`p` next/prev page · `c` new thread · `r` refresh · `←` back |
 | Thread view    | `↑`/`↓` scroll · `n`/`p` next/prev page · `r` reply · `q` back |
 | Compose        | `Ctrl+S` send · `Esc` cancel · `Tab` switch subject/body (new thread) |
-| Anywhere       | `Ctrl+C` quit |
+| Anywhere       | `Ctrl+T` cycle theme · `Ctrl+F` hide/show the footer · `Ctrl+C` quit |
 
 ## Config & data
 
 Stored under `~/.config/gfytui/` (override the directory with `GFYTUI_DIR`):
 
 - `session.json` - your saved session cookies (written with `0600` permissions; no password is stored).
-- `config.json` - optional overrides: `baseUrl`, `userAgent`, `requestDelayMs`, `editor`.
+- `config.json` - optional overrides: `baseUrl`, `userAgent`, `requestDelayMs`, `editor`, `theme`, and `defaultForumId` (the forum to open on launch; set it to `null` to land on the forum list instead).
 
 Requests are throttled (default 800ms apart) to stay polite to the server.
 
@@ -122,6 +122,7 @@ bun run probe tokens <threadId>          # dry-run: scrape reply-form tokens, no
 bun run smoke forums      # or: login | threads | thread | compose
 
 bun run typecheck
+bun test                                 # parser/bbcode unit tests (test/)
 ```
 
 ## License

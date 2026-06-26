@@ -1,6 +1,15 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import "opentui-spinner/react"; // registers the <spinner> element via extend()
 import { theme } from "../theme";
+
+/**
+ * Whether the bottom footer (StatusBar) is shown. Toggled globally with Ctrl+F
+ * in App; the provider lives at the app root so every screen's footer responds.
+ */
+export const FooterContext = createContext(true);
+
+/** Key that toggles the footer, appended to every screen's hint string. */
+export const FOOTER_HINT = "^f footer";
 
 /** Top header bar: title on the left, optional context on the right. */
 export function Header({ title, right }: { title: string; right?: string }) {
@@ -20,8 +29,15 @@ export function Header({ title, right }: { title: string; right?: string }) {
   );
 }
 
-/** Bottom status / key-hint bar. */
+/**
+ * Bottom status / key-hint bar, glued to the bottom of each screen's column.
+ * Lists the screen's shortcuts plus the global footer toggle. Hidden entirely
+ * when the footer is toggled off (Ctrl+F) so content gets the full height.
+ */
 export function StatusBar({ hints, status }: { hints: string; status?: string }) {
+  const visible = useContext(FooterContext);
+  if (!visible) return null;
+  const full = hints ? `${hints} · ${FOOTER_HINT}` : FOOTER_HINT;
   return (
     <box
       style={{
@@ -31,7 +47,7 @@ export function StatusBar({ hints, status }: { hints: string; status?: string })
         paddingRight: 1,
       }}
     >
-      <text fg={theme.dim}>{hints}</text>
+      <text fg={theme.dim}>{full}</text>
       <box style={{ flexGrow: 1 }} />
       {status ? <text fg={theme.yellow}>{status}</text> : null}
     </box>

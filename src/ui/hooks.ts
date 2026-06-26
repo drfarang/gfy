@@ -5,12 +5,14 @@ export function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-/** Screen-stack navigation. */
-export function useNav(initial: Screen) {
-  const [stack, setStack] = useState<Screen[]>([initial]);
+/** Screen-stack navigation. `initial`/`reset` accept a single screen or a
+ *  pre-seeded stack (e.g. land on a forum but keep the forum list underneath
+ *  so "back" still reaches it). */
+export function useNav(initial: Screen | Screen[]) {
+  const [stack, setStack] = useState<Screen[]>(Array.isArray(initial) ? initial : [initial]);
   const push = useCallback((s: Screen) => setStack((st) => [...st, s]), []);
   const pop = useCallback(() => setStack((st) => (st.length > 1 ? st.slice(0, -1) : st)), []);
-  const reset = useCallback((s: Screen) => setStack([s]), []);
+  const reset = useCallback((s: Screen | Screen[]) => setStack(Array.isArray(s) ? s : [s]), []);
   const replace = useCallback((s: Screen) => setStack((st) => [...st.slice(0, -1), s]), []);
   // Stable identity per stack-state: the setters are already stable, so the
   // returned object only changes when the stack does. Prevents effects that

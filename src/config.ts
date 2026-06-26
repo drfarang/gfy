@@ -12,6 +12,8 @@ export interface AppConfig {
   editor: string;
   /** Active color theme name (see ui/theme.ts). */
   theme: string;
+  /** Forum to open on launch instead of the forum list. null = forum list. */
+  defaultForumId: number | null;
 }
 
 const DEFAULTS: AppConfig = {
@@ -21,6 +23,9 @@ const DEFAULTS: AppConfig = {
   requestDelayMs: 800,
   editor: process.env.EDITOR || process.env.VISUAL || "vi",
   theme: "tokyo-night",
+  // "Fucking Around & Business Discussion" (f=26). Set to null to land on the
+  // forum list instead.
+  defaultForumId: 26,
 };
 
 export function configDir(): string {
@@ -45,6 +50,7 @@ export async function loadConfig(): Promise<AppConfig> {
       requestDelayMs: parsed.requestDelayMs ?? DEFAULTS.requestDelayMs,
       editor: parsed.editor ?? DEFAULTS.editor,
       theme: parsed.theme ?? DEFAULTS.theme,
+      defaultForumId: parsed.defaultForumId === undefined ? DEFAULTS.defaultForumId : parsed.defaultForumId,
     };
   } catch {
     return { ...DEFAULTS };
