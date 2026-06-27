@@ -39,7 +39,7 @@
     "bun"
   ],
   "scripts": {
-    "dev": "bun run --watch src/index.tsx",
+    "dev": "bun run src/index.tsx",
     "start": "bun run src/index.tsx",
     "typecheck": "tsc --noEmit",
     "test": "bun test",

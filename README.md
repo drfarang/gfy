@@ -43,8 +43,11 @@ The platform-specific native bits (`@opentui/core-*`, `sharp`) resolve automatic
 
 ```sh
 bun install
-bun start          # or: bun run dev   (auto-reload while editing)
+bun start          # (bun run dev is the same; the full-screen TUI can't hot-reload)
 ```
+
+After editing source, stop with `q` / `Ctrl+C` and re-run - `--watch`/hot-reload
+isn't compatible with a TUI that takes over the terminal in raw mode.
 
 ## Signing in
 
