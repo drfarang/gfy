@@ -118,9 +118,11 @@ export class VbClient {
   }
 
   async thread(threadId: number, page: number | "last" = 1): Promise<Paged<Post>> {
-    // `goto=lastpost` makes vBulletin redirect to the final page (our HTTP layer
-    // follows it); the parsed "Page X of Y" then reports the real page number.
-    const query = page === "last" ? "goto=lastpost" : `page=${page}`;
+    // For "last" we request an absurdly high page; vBulletin clamps to the final
+    // page and its "Page X of Y" then reports the real number. (goto=lastpost is
+    // not used: vBSEO rewrites it to a "-last-post" URL whose pagenav still reads
+    // "Page 1 of N", so we'd wrongly think we were on page 1.)
+    const query = page === "last" ? "page=100000" : `page=${page}`;
     const { html } = await this.http.get(`/showthread.php?t=${threadId}&${query}`);
     this.absorb(html);
     const result = parseThread(html);
