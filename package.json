@@ -1,6 +1,6 @@
 {
   "name": "@paleproton/gfy",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A terminal UI client for gfy.com (the GFY Webmaster Board vBulletin forum)",
   "author": "paleproton",
   "license": "MIT",
