@@ -69,7 +69,7 @@ export function ThreadListScreen({
         />
       )}
       <StatusBar
-        hints={`enter open · n/p page · ${username ? "c new · " : ""}r refresh · ^t theme · ←/h back`}
+        hints={`enter open · j/k move · J/K or shift+↑/↓ jump10 · n/p page · ${username ? "c new · " : ""}r refresh · ^t theme · ←/h back`}
         status={username ? undefined : "log in to post"}
       />
     </box>

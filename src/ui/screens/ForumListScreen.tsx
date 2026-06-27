@@ -66,7 +66,7 @@ export function ForumListScreen({
         />
       )}
       <StatusBar
-        hints={`j/k move · enter open · r refresh · o ${username ? "sign out" : "sign in"} · ^t theme · q quit`}
+        hints={`j/k move · J/K or shift+↑/↓ jump10 · enter open · r refresh · o ${username ? "sign out" : "sign in"} · ^t theme · q quit`}
         status={username ? undefined : "browsing as guest"}
       />
     </box>

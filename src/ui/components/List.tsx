@@ -4,6 +4,9 @@ import { useKeyboard } from "@opentui/react";
 import { useDimensions } from "../hooks";
 import { theme } from "../theme";
 
+/** Rows moved per Ctrl+Up / Ctrl+Down jump. */
+const JUMP = 10;
+
 export interface ListProps<T> {
   items: T[];
   /** Render the inner content of a row (the row box + highlight are handled here). */
@@ -44,14 +47,22 @@ export function List<T>({
 
   useKeyboard((key) => {
     if (!active) return;
-    const n = String(key.name);
-    if (extraKeys?.(n)) return;
-    if (n === "up" || n === "k") setSel((s) => Math.max(0, s - 1));
+    const raw = String(key.name);
+    const n = raw.toLowerCase();
+    // Treat an uppercase letter as Shift, whether the terminal reports a real
+    // shift flag (Kitty protocol: name "j" + shift) or just sends the capital
+    // letter (legacy: name "J", no modifier). Lets J/K and G work everywhere.
+    const shift = Boolean((key as { shift?: boolean }).shift) || raw !== n;
+    if (extraKeys?.(raw)) return;
+    if (shift && (n === "k" || n === "up")) setSel((s) => Math.max(0, s - JUMP));
+    else if (shift && (n === "j" || n === "down")) setSel((s) => Math.min(items.length - 1, s + JUMP));
+    else if (n === "up" || n === "k") setSel((s) => Math.max(0, s - 1));
     else if (n === "down" || n === "j") setSel((s) => Math.min(items.length - 1, s + 1));
     else if (n === "pageup") setSel((s) => Math.max(0, s - viewport));
     else if (n === "pagedown" || n === "space") setSel((s) => Math.min(items.length - 1, s + viewport));
+    else if (shift && n === "g") setSel(Math.max(0, items.length - 1));
     else if (n === "home" || n === "g") setSel(0);
-    else if (n === "end" || n === "G") setSel(Math.max(0, items.length - 1));
+    else if (n === "end") setSel(Math.max(0, items.length - 1));
     else if (n === "return" || n === "enter" || n === "right" || n === "l") {
       const it = items[sel];
       if (it !== undefined) onEnter(it, sel);
