@@ -18,15 +18,13 @@ import { ThreadListScreen } from "./screens/ThreadListScreen";
 import { ThreadViewScreen } from "./screens/ThreadViewScreen";
 import { ComposeScreen } from "./screens/ComposeScreen";
 
-// The app can open directly into a forum's thread list rather than the forum
-// index (config.defaultForumId; null = forum list). The forum list is kept
-// underneath on the stack, so "back" from the thread list still reaches it.
-function homeStack(config: AppConfig): Screen[] {
-  const id = config.defaultForumId;
-  if (id == null) return [{ kind: "forums" }];
-  // f=26 is the built-in default; its real title fills in once threads load.
-  const title = id === 26 ? "Fucking Around & Business Discussion" : "";
-  return [{ kind: "forums" }, { kind: "threads", forumId: id, title }];
+// GFY's main discussion forum is always the home screen. The forum list stays
+// underneath it on the stack, so "back" still exposes the full index.
+function homeStack(): Screen[] {
+  return [
+    { kind: "forums" },
+    { kind: "threads", forumId: 26, title: "Fucking Around & Business Discussion" },
+  ];
 }
 
 export function App({ config: initialConfig, initialSession }: { config: AppConfig; initialSession: Session | null }) {
@@ -40,7 +38,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config.baseUrl, config.userAgent, config.requestDelayMs, initialSession],
   );
-  const nav = useTabs(initialSession ? homeStack(initialConfig) : [{ kind: "login" }]);
+  const nav = useTabs(initialSession ? homeStack() : [{ kind: "login" }]);
   const [booting, setBooting] = useState(Boolean(initialSession));
 
   // Image-upload target for replies (undefined disables the feature).
@@ -53,14 +51,14 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
   // `themeTick` just forces a re-render so the mutated `theme` re-colors the UI.
   const themeRef = useRef(themes[config.theme] ? config.theme : "tokyo-night");
   const [, setThemeTick] = useState(0);
-  const applyAndPersistTheme = (next: string) => {
+  const applyThemeLive = (next: string) => {
+    if (!applyTheme(next)) return;
     themeRef.current = next;
-    applyTheme(next);
     setThemeTick((n) => n + 1);
   };
   const cycleTheme = () => {
     const next = nextThemeName(themeRef.current);
-    applyAndPersistTheme(next);
+    applyThemeLive(next);
     setConfig((c) => {
       const updated = { ...c, theme: next };
       saveConfig(updated);
@@ -70,7 +68,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
 
   // Persist edited settings, applying the theme immediately.
   const saveSettings = (next: AppConfig) => {
-    applyAndPersistTheme(themes[next.theme] ? next.theme : themeRef.current);
+    applyThemeLive(themes[next.theme] ? next.theme : themeRef.current);
     setConfig(next);
     saveConfig(next);
   };
@@ -97,7 +95,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
         if (ok) {
           const s = client.sessionData();
           if (s) saveSession(s).catch(() => {});
-          nav.reset(homeStack(config));
+          nav.reset(homeStack());
         } else {
           nav.reset({ kind: "login" });
         }
@@ -152,7 +150,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
     <FooterContext.Provider value={footerVisible}>
       <box style={{ flexDirection: "column", flexGrow: 1, backgroundColor: theme.bg }}>
         <TabBar tabs={nav.tabs} active={nav.active} />
-        <ErrorBoundary resetKey={screen} onReset={() => nav.reset(homeStack(config))}>
+        <ErrorBoundary resetKey={screen} onReset={() => nav.reset(homeStack())}>
           {renderScreen()}
         </ErrorBoundary>
       </box>
@@ -167,15 +165,16 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           client={client}
           onAuthed={() => {
             persist();
-            nav.reset(homeStack(config));
+            nav.reset(homeStack());
           }}
-          onBrowseAsGuest={() => nav.reset(homeStack(config))}
+          onBrowseAsGuest={() => nav.reset(homeStack())}
         />
       );
     case "settings":
       return (
         <SettingsScreen
           config={config}
+          onThemeChange={applyThemeLive}
           onSave={(next) => {
             saveSettings(next);
             nav.pop();
@@ -220,7 +219,9 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           threadId={screen.threadId}
           title={screen.title}
           username={client.username}
-          onReply={() => nav.push({ kind: "composeReply", threadId: screen.threadId, title: screen.title })}
+          onReply={(quoteContext) =>
+            nav.push({ kind: "composeReply", threadId: screen.threadId, title: screen.title, quoteContext })
+          }
           onBack={() => nav.pop()}
         />
       );
@@ -231,6 +232,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           mode="reply"
           threadId={screen.threadId}
           title={screen.title}
+          quoteContext={screen.quoteContext}
           upload={upload}
           onDone={() => {
             nav.pop();

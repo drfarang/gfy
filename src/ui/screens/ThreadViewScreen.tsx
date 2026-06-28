@@ -8,6 +8,7 @@ import { truncate } from "../format";
 import { theme } from "../theme";
 import { ImageBlock } from "../components/ImageBlock";
 import { ClipContext, type Rect } from "../clip";
+import type { QuoteContext } from "../types";
 
 function renderBody(body: string) {
   if (!body) return <text fg={theme.fg}>(no text)</text>;
@@ -97,7 +98,7 @@ export function ThreadViewScreen({
   threadId: number;
   title: string;
   username?: string;
-  onReply: () => void;
+  onReply: (context?: QuoteContext) => void;
   onBack: () => void;
 }) {
   const { cols } = useDimensions();
@@ -131,7 +132,9 @@ export function ThreadViewScreen({
     if ((key as { ctrl?: boolean }).ctrl || (key as { meta?: boolean }).meta) return;
     const n = String(key.name);
     if (n === "r") {
-      if (username) onReply();
+      if (username) {
+        onReply(data ? { posts: data.items, page: currentPage, totalPages } : undefined);
+      }
     } else if (n === "n") setPage(Math.min(totalPages, currentPage + 1));
     else if (n === "p") setPage(Math.max(1, currentPage - 1));
     else if (n === "q" || n === "escape" || n === "backspace" || n === "left" || n === "h") onBack();

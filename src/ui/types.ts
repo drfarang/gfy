@@ -1,3 +1,11 @@
+import type { Post } from "../vb/types";
+
+export interface QuoteContext {
+  posts: Post[];
+  page: number;
+  totalPages: number;
+}
+
 // Screen stack model. Only the top screen is rendered at a time.
 export type Screen =
   | { kind: "login" }
@@ -5,5 +13,5 @@ export type Screen =
   | { kind: "forums" }
   | { kind: "threads"; forumId: number; title: string }
   | { kind: "thread"; threadId: number; title: string }
-  | { kind: "composeReply"; threadId: number; title: string }
+  | { kind: "composeReply"; threadId: number; title: string; quoteContext?: QuoteContext }
   | { kind: "composeThread"; forumId: number; title: string };

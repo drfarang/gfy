@@ -12,8 +12,6 @@ export interface AppConfig {
   editor: string;
   /** Active color theme name (see ui/theme.ts). */
   theme: string;
-  /** Forum to open on launch instead of the forum list. null = forum list. */
-  defaultForumId: number | null;
   /** Image upload target for replies. uploadHost "" disables the feature. */
   uploadHost: string;
   uploadDir: string;
@@ -27,9 +25,6 @@ const DEFAULTS: AppConfig = {
   requestDelayMs: 800,
   editor: process.env.EDITOR || process.env.VISUAL || "vi",
   theme: "tokyo-night",
-  // "Fucking Around & Business Discussion" (f=26). Set to null to land on the
-  // forum list instead.
-  defaultForumId: 26,
   // Image upload is opt-in and disabled by default so no personal server details
   // ship in the repo. Configure it in your local config.json (see configDir()):
   //   "uploadHost": "<your ssh host/alias>",
@@ -62,7 +57,6 @@ export async function loadConfig(): Promise<AppConfig> {
       requestDelayMs: parsed.requestDelayMs ?? DEFAULTS.requestDelayMs,
       editor: parsed.editor ?? DEFAULTS.editor,
       theme: parsed.theme ?? DEFAULTS.theme,
-      defaultForumId: parsed.defaultForumId === undefined ? DEFAULTS.defaultForumId : parsed.defaultForumId,
       uploadHost: parsed.uploadHost ?? DEFAULTS.uploadHost,
       uploadDir: parsed.uploadDir ?? DEFAULTS.uploadDir,
       uploadBaseUrl: parsed.uploadBaseUrl ?? DEFAULTS.uploadBaseUrl,
