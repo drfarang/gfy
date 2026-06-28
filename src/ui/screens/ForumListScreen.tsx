@@ -11,6 +11,7 @@ export function ForumListScreen({
   client,
   username,
   onOpen,
+  onOpenInTab,
   onQuit,
   onLogout,
   onLogin,
@@ -18,6 +19,7 @@ export function ForumListScreen({
   client: VbClient;
   username?: string;
   onOpen: (f: Forum) => void;
+  onOpenInTab?: (f: Forum) => void;
   onQuit: () => void;
   onLogout: () => void;
   onLogin?: () => void;
@@ -26,6 +28,8 @@ export function ForumListScreen({
   const { data, loading, error, reload } = useAsync(() => client.forums(), []);
 
   useKeyboard((key) => {
+    // Ctrl/Meta combos are global (handled in App); don't also fire plain-key actions.
+    if ((key as { ctrl?: boolean }).ctrl || (key as { meta?: boolean }).meta) return;
     const n = String(key.name);
     if (n === "r") reload();
     else if (n === "q") onQuit();
@@ -50,6 +54,7 @@ export function ForumListScreen({
           items={data ?? []}
           chromeRows={5}
           onEnter={onOpen}
+          onOpenInTab={onOpenInTab}
           emptyText="No forums found."
           renderRow={(f, sel) => {
             const title = truncate(f.title, 38);
@@ -66,7 +71,7 @@ export function ForumListScreen({
         />
       )}
       <StatusBar
-        hints={`j/k move · J/K or shift+↑/↓ jump10 · enter open · r refresh · o ${username ? "sign out" : "sign in"} · ^t theme · q quit`}
+        hints={`j/k move · enter open · ⇧enter/t newtab · , settings · r refresh · o ${username ? "sign out" : "sign in"} · q quit`}
         status={username ? undefined : "browsing as guest"}
       />
     </box>

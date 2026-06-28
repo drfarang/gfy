@@ -47,7 +47,7 @@ export function StatusBar({ hints, status }: { hints: string; status?: string })
         paddingRight: 1,
       }}
     >
-      <text fg={theme.dim}>{full}</text>
+      <text fg={theme.fg}>{full}</text>
       <box style={{ flexGrow: 1 }} />
       {status ? <text fg={theme.yellow}>{status}</text> : null}
     </box>

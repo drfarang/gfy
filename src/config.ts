@@ -14,6 +14,10 @@ export interface AppConfig {
   theme: string;
   /** Forum to open on launch instead of the forum list. null = forum list. */
   defaultForumId: number | null;
+  /** Image upload target for replies. uploadHost "" disables the feature. */
+  uploadHost: string;
+  uploadDir: string;
+  uploadBaseUrl: string;
 }
 
 const DEFAULTS: AppConfig = {
@@ -26,6 +30,14 @@ const DEFAULTS: AppConfig = {
   // "Fucking Around & Business Discussion" (f=26). Set to null to land on the
   // forum list instead.
   defaultForumId: 26,
+  // Image upload is opt-in and disabled by default so no personal server details
+  // ship in the repo. Configure it in your local config.json (see configDir()):
+  //   "uploadHost": "<your ssh host/alias>",
+  //   "uploadDir": "/var/www/your-pics-dir",
+  //   "uploadBaseUrl": "https://your-pics-host/"
+  uploadHost: "",
+  uploadDir: "",
+  uploadBaseUrl: "",
 };
 
 export function configDir(): string {
@@ -51,6 +63,9 @@ export async function loadConfig(): Promise<AppConfig> {
       editor: parsed.editor ?? DEFAULTS.editor,
       theme: parsed.theme ?? DEFAULTS.theme,
       defaultForumId: parsed.defaultForumId === undefined ? DEFAULTS.defaultForumId : parsed.defaultForumId,
+      uploadHost: parsed.uploadHost ?? DEFAULTS.uploadHost,
+      uploadDir: parsed.uploadDir ?? DEFAULTS.uploadDir,
+      uploadBaseUrl: parsed.uploadBaseUrl ?? DEFAULTS.uploadBaseUrl,
     };
   } catch {
     return { ...DEFAULTS };

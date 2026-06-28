@@ -22,6 +22,7 @@ const ST = ESC + "\\";
 let nextImageId = 1;
 let nextPlacementId = 1;
 const transmitted = new Set<number>();
+const animated = new Set<number>();
 
 export function allocImageId(): number {
   return nextImageId++;
@@ -70,6 +71,60 @@ export function transmitImage(imageId: number, pngBytes: Buffer): void {
   transmitted.add(imageId);
 }
 
+export interface AnimFrame {
+  pngBytes: Buffer;
+  /** display gap before the next frame, in milliseconds. */
+  delayMs: number;
+}
+
+/** Transmit one extra animation frame (a=f) and append it to `imageId`. */
+function transmitFrame(imageId: number, pngBytes: Buffer, delayMs: number): void {
+  const b64 = pngBytes.toString("base64");
+  const gap = Math.max(1, Math.round(delayMs));
+  const CHUNK = 4096;
+  // X=1: overwrite (frames are full canvas, no need to alpha-blend onto the
+  // previous one). Omitting r/c appends a new frame after the last.
+  let out = "";
+  if (b64.length <= CHUNK) {
+    out = `${APC}a=f,i=${imageId},f=100,X=1,z=${gap},q=2,m=0;${b64}${ST}`;
+  } else {
+    for (let i = 0; i < b64.length; i += CHUNK) {
+      const chunk = b64.slice(i, i + CHUNK);
+      const last = i + CHUNK >= b64.length;
+      out +=
+        i === 0
+          ? `${APC}a=f,i=${imageId},f=100,X=1,z=${gap},q=2,m=1;${chunk}${ST}`
+          : `${APC}m=${last ? 0 : 1},q=2;${chunk}${ST}`;
+    }
+  }
+  write(out);
+}
+
+/**
+ * Transmit a multi-frame animation under `imageId` and start looping playback.
+ * Falls back to a plain still transmit for a single frame. No-op if already
+ * transmitted. Terminals without animation support simply show frame 1.
+ */
+export function transmitAnimation(imageId: number, frames: AnimFrame[]): void {
+  const first = frames[0];
+  if (!first) return;
+  if (frames.length <= 1) {
+    transmitImage(imageId, first.pngBytes);
+    return;
+  }
+  if (animated.has(imageId)) return;
+  transmitImage(imageId, first.pngBytes); // frame 1 (root)
+  for (let j = 1; j < frames.length; j++) {
+    transmitFrame(imageId, frames[j]!.pngBytes, frames[j]!.delayMs);
+  }
+  // The root frame's gap can't ride along on a=t, so set it via control.
+  const rootGap = Math.max(1, Math.round(first.delayMs));
+  write(`${APC}a=a,i=${imageId},r=1,z=${rootGap},q=2${ST}`);
+  // s=3: run; v=1: loop infinitely.
+  write(`${APC}a=a,i=${imageId},s=3,v=1,q=2${ST}`);
+  animated.add(imageId);
+}
+
 export interface Placement {
   imageId: number;
   placementId: number;
@@ -105,5 +160,6 @@ export function deletePlacement(imageId: number, placementId: number): void {
 /** Free a stored image and all of its placements. */
 export function deleteImage(imageId: number): void {
   transmitted.delete(imageId);
+  animated.delete(imageId);
   write(`${APC}a=d,d=I,i=${imageId},q=2${ST}`);
 }

@@ -16,10 +16,11 @@ import {
 } from "@opentui/core";
 import { extend } from "@opentui/react";
 import type { Rect } from "../clip";
-import { transmitImage, placeImage, deletePlacement } from "../kitty";
+import { transmitImage, transmitAnimation, placeImage, deletePlacement, type AnimFrame } from "../kitty";
 
 export interface KittyImageOptions extends RenderableOptions {
   pngBytes?: Buffer;
+  frames?: AnimFrame[];
   imageId?: number;
   placementId?: number;
   cols?: number;
@@ -33,6 +34,7 @@ export interface KittyImageOptions extends RenderableOptions {
 
 export class KittyImageRenderable extends Renderable {
   pngBytes: Buffer | null = null;
+  frames: AnimFrame[] | null = null;
   imageId = 0;
   placementId = 0;
   imgCols = 0;
@@ -51,6 +53,7 @@ export class KittyImageRenderable extends Renderable {
   constructor(ctx: RenderContext, options: KittyImageOptions) {
     super(ctx, options);
     this.pngBytes = options.pngBytes ?? null;
+    this.frames = options.frames ?? null;
     this.imageId = options.imageId ?? 0;
     this.placementId = options.placementId ?? 0;
     this.imgCols = options.cols ?? 0;
@@ -77,7 +80,11 @@ export class KittyImageRenderable extends Renderable {
       this.lastKey = "";
     }
 
-    transmitImage(this.imageId, this.pngBytes);
+    if (this.frames && this.frames.length > 1) {
+      transmitAnimation(this.imageId, this.frames);
+    } else {
+      transmitImage(this.imageId, this.pngBytes);
+    }
 
     const col = this.screenX;
     const row = this.screenY;

@@ -10,8 +10,9 @@ gfy.com runs **vBulletin 3.8.8** (no public API), so this app talks to it the wa
 - Browse the forum list
 - List threads in a forum (paginated)
 - Read a thread (paginated, scrollable, with post bodies rendered to readable text)
-- Reply to a thread
+- Reply to a thread (drag or paste an image to auto-upload it and insert the `[IMG]` tag)
 - Start a new thread
+- Open threads in multiple tabs
 - Persists your session so you stay logged in between runs
 
 ## Requirements
@@ -66,11 +67,13 @@ Two ways, switchable on the login screen with **Ctrl+K**:
 
 | Context        | Keys |
 | -------------- | ---- |
-| Lists          | `j`/`k` or arrows move · `enter`/`→` open · `←`/`esc`/`backspace` back · `g`/`G` top/bottom · `PgUp`/`PgDn` page |
-| Forums         | `enter` open · `r` refresh · `o` sign out · `q` quit |
+| Lists          | `j`/`k` or arrows move · `J`/`K` jump 10 · `enter`/`→` open · `Shift+Enter`/`t` open in new tab · `←`/`esc`/`backspace` back · `g`/`G` top/bottom · `PgUp`/`PgDn` page |
+| Tabs           | `Shift+Enter`/`t` open thread in new background tab · `Ctrl+1`..`Ctrl+9` switch tab · `Ctrl+W` close tab |
+| Forums         | `enter` open · `,` settings · `r` refresh · `o` sign out · `q` quit |
+| Settings       | `Tab`/`↑↓` move fields · `←`/`→` change theme · `Ctrl+S` save · `Esc` cancel |
 | Thread list    | `enter` open · `n`/`p` next/prev page · `c` new thread · `r` refresh · `←` back |
 | Thread view    | `↑`/`↓` scroll · `n`/`p` next/prev page · `r` reply · `q` back |
-| Compose        | `Ctrl+S` send · `Esc` cancel · `Tab` switch subject/body (new thread) |
+| Compose        | `Ctrl+S` send · `Esc` cancel · `Tab` switch subject/body (new thread) · drag an image in / `Ctrl+V` paste a clipboard image to upload it |
 | Anywhere       | `Ctrl+T` cycle theme · `Ctrl+F` hide/show the footer · `Ctrl+C` quit |
 
 ## Config & data
@@ -78,7 +81,9 @@ Two ways, switchable on the login screen with **Ctrl+K**:
 Stored under `~/.config/gfytui/` (override the directory with `GFYTUI_DIR`):
 
 - `session.json` - your saved session cookies (written with `0600` permissions; no password is stored).
-- `config.json` - optional overrides: `baseUrl`, `userAgent`, `requestDelayMs`, `editor`, `theme`, and `defaultForumId` (the forum to open on launch; set it to `null` to land on the forum list instead).
+- `config.json` - optional overrides: `baseUrl`, `userAgent`, `requestDelayMs`, `editor`, `theme`, `defaultForumId` (the forum to open on launch; `null` lands on the forum list), and the image-upload target `uploadHost` / `uploadDir` / `uploadBaseUrl` (an scp host, its directory, and the public URL that serves it; `uploadHost: ""` disables upload). Images are uploaded over `scp`, so the host must be reachable with key-based SSH.
+
+The theme, default forum, and image-upload target can also be changed in-app: press `,` on the forum list to open **Settings**, edit the fields, and `Ctrl+S` to save (written back to `config.json`). Upload is disabled by default - set the upload fields there to enable it.
 
 Requests are throttled (default 800ms apart) to stay polite to the server.
 

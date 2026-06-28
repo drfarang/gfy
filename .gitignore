@@ -26,3 +26,6 @@ logs
 # local scratch / scraped HTML fixtures
 *.local.html
 scratch/
+
+# RubberDuck indexer config (contains auth token)
+.rubberduck/

@@ -127,12 +127,14 @@ export function ThreadViewScreen({
   });
 
   useKeyboard((key) => {
+    // Ctrl/Meta combos are global (handled in App); don't also fire plain-key actions.
+    if ((key as { ctrl?: boolean }).ctrl || (key as { meta?: boolean }).meta) return;
     const n = String(key.name);
     if (n === "r") {
       if (username) onReply();
     } else if (n === "n") setPage(Math.min(totalPages, currentPage + 1));
     else if (n === "p") setPage(Math.max(1, currentPage - 1));
-    else if (n === "q" || n === "escape" || n === "backspace") onBack();
+    else if (n === "q" || n === "escape" || n === "backspace" || n === "left" || n === "h") onBack();
   });
 
   return (
@@ -161,7 +163,7 @@ export function ThreadViewScreen({
         </ClipContext.Provider>
       )}
       <StatusBar
-        hints={`up/down scroll · n/p page · ${username ? "r reply · " : ""}^t theme · q back`}
+        hints={`↑/↓ scroll · n/p page · ${username ? "r reply · " : ""}^t theme · ←/q back`}
         status={username ? undefined : "log in to reply"}
       />
     </box>

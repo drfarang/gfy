@@ -14,6 +14,7 @@ export function ThreadListScreen({
   title,
   username,
   onOpen,
+  onOpenInTab,
   onBack,
   onNewThread,
 }: {
@@ -22,6 +23,7 @@ export function ThreadListScreen({
   title: string;
   username?: string;
   onOpen: (t: ThreadSummary) => void;
+  onOpenInTab?: (t: ThreadSummary) => void;
   onBack: () => void;
   onNewThread: () => void;
 }) {
@@ -52,6 +54,7 @@ export function ThreadListScreen({
           items={data?.items ?? []}
           chromeRows={5}
           onEnter={onOpen}
+          onOpenInTab={onOpenInTab}
           onBack={onBack}
           emptyText="No threads on this page."
           renderRow={(t, sel) => {
@@ -69,7 +72,7 @@ export function ThreadListScreen({
         />
       )}
       <StatusBar
-        hints={`enter open · j/k move · J/K or shift+↑/↓ jump10 · n/p page · ${username ? "c new · " : ""}r refresh · ^t theme · ←/h back`}
+        hints={`enter open · ⇧enter/t newtab · j/k move · n/p page · ${username ? "c new · " : ""}, settings · r refresh · ←/h back`}
         status={username ? undefined : "log in to post"}
       />
     </box>

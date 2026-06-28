@@ -12,6 +12,8 @@ export interface ListProps<T> {
   /** Render the inner content of a row (the row box + highlight are handled here). */
   renderRow: (item: T, selected: boolean) => ReactNode;
   onEnter: (item: T, index: number) => void;
+  /** Open the selected item in a new background tab (Shift+Enter or `t`). */
+  onOpenInTab?: (item: T, index: number) => void;
   onBack?: () => void;
   active?: boolean;
   /** Rows consumed by surrounding chrome (header + status + borders), to size the viewport. */
@@ -25,6 +27,7 @@ export function List<T>({
   items,
   renderRow,
   onEnter,
+  onOpenInTab,
   onBack,
   active = true,
   chromeRows = 8,
@@ -47,6 +50,9 @@ export function List<T>({
 
   useKeyboard((key) => {
     if (!active) return;
+    // Ctrl/Meta combos are global (theme, tab close/switch, quit) and handled in
+    // App. Ignore them here so e.g. Ctrl+T doesn't also fire the plain-`t` newtab.
+    if ((key as { ctrl?: boolean }).ctrl || (key as { meta?: boolean }).meta) return;
     const raw = String(key.name);
     const n = raw.toLowerCase();
     // Treat an uppercase letter as Shift, whether the terminal reports a real
@@ -63,9 +69,15 @@ export function List<T>({
     else if (shift && n === "g") setSel(Math.max(0, items.length - 1));
     else if (n === "home" || n === "g") setSel(0);
     else if (n === "end") setSel(Math.max(0, items.length - 1));
-    else if (n === "return" || n === "enter" || n === "right" || n === "l") {
+    else if (n === "return" || n === "enter") {
+      const it = items[sel];
+      if (it !== undefined) (shift && onOpenInTab ? onOpenInTab : onEnter)(it, sel);
+    } else if (n === "right" || n === "l") {
       const it = items[sel];
       if (it !== undefined) onEnter(it, sel);
+    } else if (n === "t" && onOpenInTab) {
+      const it = items[sel];
+      if (it !== undefined) onOpenInTab(it, sel);
     } else if (n === "left" || n === "h" || n === "escape" || n === "backspace") {
       onBack?.();
     }

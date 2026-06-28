@@ -1,6 +1,7 @@
 // Screen stack model. Only the top screen is rendered at a time.
 export type Screen =
   | { kind: "login" }
+  | { kind: "settings" }
   | { kind: "forums" }
   | { kind: "threads"; forumId: number; title: string }
   | { kind: "thread"; threadId: number; title: string }

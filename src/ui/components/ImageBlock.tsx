@@ -4,7 +4,13 @@ import { useRenderer } from "@opentui/react";
 import { theme } from "../theme";
 import { useDimensions } from "../hooks";
 import { ClipContext } from "../clip";
-import { allocImageId, allocPlacementId, cellPixelSize, kittySupported } from "../kitty";
+import {
+  allocImageId,
+  allocPlacementId,
+  cellPixelSize,
+  kittySupported,
+  type AnimFrame,
+} from "../kitty";
 import "./KittyImage"; // registers the <kittyImage> renderable via extend()
 
 const hex = (r: number, g: number, b: number) => {
@@ -82,7 +88,8 @@ export function ImageBlock({ src }: { src: string }) {
 
 interface KittyPrep {
   imageId: number;
-  pngBytes: Buffer;
+  pngBytes: Buffer; // frame 1 (root); also the still for non-animated images
+  frames: AnimFrame[]; // length 1 for stills, N for animations
   srcPxW: number;
   srcPxH: number;
   cols: number;
@@ -90,6 +97,20 @@ interface KittyPrep {
 }
 
 const prepCache = new Map<string, KittyPrep>();
+
+// Largest upscale we'll apply to a small source image before it gets too soft.
+const MAX_SCALE = 3;
+
+// Cap how many GIF frames we decode + transmit. Web gifs are usually short;
+// this bounds the up-front sharp decode cost and the kitty transmit payload.
+const MAX_FRAMES = 48;
+
+// Clamp per-frame delays. Browsers floor very short gaps (GIFs commonly encode
+// 0); mirror that so animations don't run absurdly fast.
+function clampDelay(ms: number | undefined): number {
+  if (!ms || ms < 20) return 100;
+  return ms;
+}
 
 async function prepareKittyImage(
   src: string,
@@ -106,8 +127,38 @@ async function prepareKittyImage(
   const buf = await fetchImageBytes(src);
   const boxW = Math.max(1, Math.round(maxCols * cellW));
   const boxH = Math.max(1, Math.round(maxRows * cellH));
+
+  // Most forum images are small (web gifs/photos ~400-600px). Scaling only down
+  // (withoutEnlargement) left them tiny on a big terminal, so we upscale to fill
+  // the box - but cap the blow-up at MAX_SCALE so a tiny source doesn't blur
+  // into mush. Browsers upscale freely; this is a sane middle ground.
+  const meta = await sharp(buf).metadata();
+  const pages = meta.pages ?? 1;
+  // For animated images metadata.height is the whole frame strip; pageHeight is
+  // one frame. Scale against the single-frame dimensions.
+  const srcW = meta.width ?? boxW;
+  const srcH = meta.pageHeight ?? meta.height ?? boxH;
+  const scale = Math.min(boxW / srcW, boxH / srcH, MAX_SCALE);
+  const targetW = Math.max(1, Math.round(srcW * scale));
+  const targetH = Math.max(1, Math.round(srcH * scale));
+
+  const prep =
+    pages > 1
+      ? await prepareAnimated(buf, pages, meta.delay, targetW, targetH, cellW, cellH)
+      : await prepareStill(buf, targetW, targetH, cellW, cellH);
+  prepCache.set(key, prep);
+  return prep;
+}
+
+async function prepareStill(
+  buf: Buffer,
+  targetW: number,
+  targetH: number,
+  cellW: number,
+  cellH: number,
+): Promise<KittyPrep> {
   const out = await sharp(buf)
-    .resize({ width: boxW, height: boxH, fit: "inside", withoutEnlargement: true })
+    .resize({ width: targetW, height: targetH, fit: "fill" })
     .png()
     .toBuffer({ resolveWithObject: true });
 
@@ -115,16 +166,68 @@ async function prepareKittyImage(
   const h = out.info.height ?? 0;
   if (w < 2 || h < 2) throw new Error("tiny");
 
-  const prep: KittyPrep = {
+  return {
     imageId: allocImageId(),
     pngBytes: out.data,
+    frames: [{ pngBytes: out.data, delayMs: 0 }],
     srcPxW: w,
     srcPxH: h,
     cols: Math.max(1, Math.ceil(w / cellW)),
     rows: Math.max(1, Math.ceil(h / cellH)),
   };
-  prepCache.set(key, prep);
-  return prep;
+}
+
+async function prepareAnimated(
+  buf: Buffer,
+  pages: number,
+  delays: number[] | undefined,
+  targetW: number,
+  targetH: number,
+  cellW: number,
+  cellH: number,
+): Promise<KittyPrep> {
+  const frameCount = Math.min(pages, MAX_FRAMES);
+
+  // Decode the (coalesced) frame strip once at native size. libvips renders each
+  // page to a full frame, so slicing the raw RGBA gives clean full-canvas frames
+  // we can each resize independently - no resize-across-frame-boundary blur.
+  const { data, info } = await sharp(buf, { pages: frameCount })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const fw = info.width ?? 0;
+  const fh = info.pageHeight ?? Math.round((info.height ?? 0) / frameCount);
+  if (fw < 2 || fh < 2) throw new Error("tiny");
+  const bytesPerFrame = fw * fh * 4;
+
+  const frames: AnimFrame[] = [];
+  for (let i = 0; i < frameCount; i++) {
+    const start = i * bytesPerFrame;
+    const slice = data.subarray(start, start + bytesPerFrame);
+    if (slice.length < bytesPerFrame) break;
+    const png = await sharp(slice, { raw: { width: fw, height: fh, channels: 4 } })
+      .resize({ width: targetW, height: targetH, fit: "fill" })
+      .png()
+      .toBuffer();
+    frames.push({ pngBytes: png, delayMs: clampDelay(delays?.[i]) });
+  }
+  if (frames.length === 0) throw new Error("no frames");
+
+  // Sample the resized dimensions back from the first encoded frame.
+  const probe = await sharp(frames[0]!.pngBytes).metadata();
+  const w = probe.width ?? targetW;
+  const h = probe.height ?? targetH;
+
+  return {
+    imageId: allocImageId(),
+    pngBytes: frames[0]!.pngBytes,
+    frames,
+    srcPxW: w,
+    srcPxH: h,
+    cols: Math.max(1, Math.ceil(w / cellW)),
+    rows: Math.max(1, Math.ceil(h / cellH)),
+  };
 }
 
 function KittyImageBlock({ src, cell }: { src: string; cell: { w: number; h: number } }) {
@@ -134,10 +237,11 @@ function KittyImageBlock({ src, cell }: { src: string; cell: { w: number; h: num
   const [prep, setPrep] = useState<KittyPrep | null>(null);
   const [failed, setFailed] = useState(false);
 
-  // Scale with the screen (~2x the old fixed caps), but keep images from
-  // dominating: width up to ~half the terminal, height up to ~70% of it.
-  const maxCols = Math.max(16, Math.min(termCols - 4, 120));
-  const maxRows = Math.max(16, Math.min(Math.round(termRows * 0.7), 48));
+  // Box the image into a generous share of the screen: up to ~65% of the width
+  // and ~85% of the height. The actual size is min(this box, source x MAX_SCALE),
+  // so small images still grow but never blow up past MAX_SCALE.
+  const maxCols = Math.max(20, Math.min(termCols - 4, Math.round(termCols * 0.65)));
+  const maxRows = Math.max(20, Math.round((termRows - 3) * 0.85));
 
   useEffect(() => {
     let active = true;
@@ -160,6 +264,7 @@ function KittyImageBlock({ src, cell }: { src: string; cell: { w: number; h: num
       key={prep.imageId}
       style={{ width: prep.cols, height: prep.rows, marginTop: 1 }}
       pngBytes={prep.pngBytes}
+      frames={prep.frames}
       imageId={prep.imageId}
       placementId={placementId}
       cols={prep.cols}

@@ -188,14 +188,21 @@ export class VbClient {
   }
 }
 
-function interpretPost(res: HttpResponse): PostResult {
-  const errors = parseErrors(res.html);
-  if (errors.length > 0) return { ok: false, error: errors.join(" ").slice(0, 300), url: res.finalUrl };
-  // On success vBulletin redirects us to the thread/post; our HttpClient follows it.
-  const landedOnThread = /showthread|\/\d+-[a-z0-9-]*\.html/i.test(res.finalUrl);
-  if (landedOnThread || /thank you for posting|your post/i.test(res.html)) {
-    return { ok: true, url: res.finalUrl };
+export function interpretPost(res: HttpResponse): PostResult {
+  const html = res.html;
+  // vBulletin confirms a successful post with a "redirect" page that meta-refreshes
+  // to the thread (or it 302s straight there, which our HTTP layer follows). That
+  // page wraps its "Thank you for posting" message in <div class="panel">, which
+  // parseErrors would read as an error - so we MUST check for success FIRST.
+  const refreshUrl = (html.match(/http-equiv=["']?refresh["']?[^>]*?url=([^"'\s>]+)/i)?.[1] ?? "").replace(/&amp;/g, "&");
+  const threadRe = /showthread|\/\d+-[a-z0-9-]*\.html|[?&]p=\d+/i;
+  const wentToThread = threadRe.test(res.finalUrl) || threadRe.test(refreshUrl);
+  if (wentToThread || /thank you for posting|your (?:reply|message|post) (?:has been|was)/i.test(html)) {
+    return { ok: true, url: refreshUrl || res.finalUrl };
   }
+  // Not a recognizable success page - now a real error panel is meaningful.
+  const errors = parseErrors(html);
+  if (errors.length > 0) return { ok: false, error: errors.join(" ").slice(0, 300), url: res.finalUrl };
   // No explicit error but we can't confirm success either.
   return { ok: true, url: res.finalUrl };
 }
