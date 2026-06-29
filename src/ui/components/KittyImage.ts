@@ -16,12 +16,19 @@ import {
 } from "@opentui/core";
 import { extend } from "@opentui/react";
 import type { Rect } from "../clip";
-import { transmitImage, transmitAnimation, placeImage, deletePlacement, type AnimFrame } from "../kitty";
+import {
+  allocImageId,
+  transmitImage,
+  transmitAnimation,
+  placeImage,
+  deletePlacement,
+  deleteImage,
+  type AnimFrame,
+} from "../kitty";
 
 export interface KittyImageOptions extends RenderableOptions {
   pngBytes?: Buffer;
   frames?: AnimFrame[];
-  imageId?: number;
   placementId?: number;
   cols?: number;
   rows?: number;
@@ -35,7 +42,7 @@ export interface KittyImageOptions extends RenderableOptions {
 export class KittyImageRenderable extends Renderable {
   pngBytes: Buffer | null = null;
   frames: AnimFrame[] | null = null;
-  imageId = 0;
+  readonly imageId: number;
   placementId = 0;
   imgCols = 0;
   imgRows = 0;
@@ -52,9 +59,9 @@ export class KittyImageRenderable extends Renderable {
 
   constructor(ctx: RenderContext, options: KittyImageOptions) {
     super(ctx, options);
+    this.imageId = allocImageId();
     this.pngBytes = options.pngBytes ?? null;
     this.frames = options.frames ?? null;
-    this.imageId = options.imageId ?? 0;
     this.placementId = options.placementId ?? 0;
     this.imgCols = options.cols ?? 0;
     this.imgRows = options.rows ?? 0;
@@ -144,10 +151,9 @@ export class KittyImageRenderable extends Renderable {
   }
 
   protected override destroySelf(): void {
-    if (this.placed) {
-      deletePlacement(this.imageId, this.placementId);
-      this.placed = false;
-    }
+    deleteImage(this.imageId);
+    this.placed = false;
+    this.lastKey = "";
     super.destroySelf();
   }
 }
