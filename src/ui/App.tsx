@@ -22,7 +22,7 @@ import { ComposeScreen } from "./screens/ComposeScreen";
 function homeStack(): Stack {
   return [
     { kind: "forums" },
-    { kind: "threads", forumId: 26, title: "Fucking Around & Business Discussion" },
+    { kind: "threads", forumId: 33, title: "Fucking Around & Business Discussion", forumPath: "/forum/simply-business/fucking-around-business-discussion" },
   ];
 }
 
@@ -188,8 +188,8 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
         <ForumListScreen
           client={client}
           username={client.username}
-          onOpen={(f) => nav.push({ kind: "threads", forumId: f.id, title: f.title })}
-          onOpenInTab={(f) => nav.openInTab({ kind: "threads", forumId: f.id, title: f.title })}
+          onOpen={(f) => nav.push({ kind: "threads", forumId: f.id, title: f.title, forumPath: f.path })}
+          onOpenInTab={(f) => nav.openInTab({ kind: "threads", forumId: f.id, title: f.title, forumPath: f.path })}
           onQuit={() => renderer.destroy()}
           onLogin={() => nav.reset({ kind: "login" })}
           onLogout={async () => {
@@ -206,6 +206,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           forumId={screen.forumId}
           title={screen.title}
           username={client.username}
+          forumPath={(screen as any).forumPath}
           onOpen={(t) => nav.push({ kind: "thread", threadId: t.id, title: t.title })}
           onOpenInTab={(t) => nav.openInTab({ kind: "thread", threadId: t.id, title: t.title })}
           onBack={() => nav.pop()}

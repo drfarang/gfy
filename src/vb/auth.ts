@@ -9,39 +9,37 @@ export interface LoginResult {
 }
 
 /**
- * Username/password login. vBulletin accepts the plaintext password in
- * `vb_login_password` when the md5 fields are blank, so no client-side hashing
- * is needed. The auth cookies (bbuserid/bbpassword) are set on the response to
- * the POST (or its redirect), which the HttpClient's cookie jar captures.
+ * Username/password login for vB6.
+ * Uses the AJAX endpoint /auth/ajax-login that the site JS posts the login form to.
+ * The form fields are username, password, rememberme. Returns JSON on errors.
+ * Cookies (bbuserid etc) are still set by server on success.
  */
 export async function login(
   http: HttpClient,
   username: string,
   password: string,
 ): Promise<LoginResult> {
-  // Establish a guest session (bbsessionhash) first.
+  // Establish a guest session (bbsessionhash etc) first.
   await http.get("/");
 
-  const res = await http.postForm("/login.php?do=login", {
-    vb_login_username: username,
-    vb_login_password: password,
-    vb_login_md5password: "",
-    vb_login_md5password_utf: "",
-    cookieuser: "1",
-    s: "",
-    securitytoken: "guest",
-    do: "login",
+  // Note: use postForm (form encoded) even though site JS uses ajax; server accepts it.
+  const res = await http.postForm("/auth/ajax-login", {
+    username,
+    password,
+    rememberme: "on",
   });
 
-  // The post-login confirmation page usually already reflects the session, but
-  // re-check against the index to be sure.
+  // ajax-login returns JSON like {"errors":[...]} or on success may 200 + set cookies + redirect instruction.
+  // Re-fetch home to confirm session and grab tokens/name.
   let html = res.html;
   if (!isLoggedIn(html)) {
     html = (await http.get("/")).html;
   }
 
   if (!isLoggedIn(html)) {
-    return { ok: false, error: loginError(res.html) };
+    // try to surface a useful message from the json error response
+    const errMsg = loginErrorFromAjax(res.html) || loginError(res.html);
+    return { ok: false, error: errMsg };
   }
   return { ok: true, session: sessionFrom(http, html) };
 }
@@ -85,4 +83,21 @@ function loginError(html: string): string {
     return "The login form requires a CAPTCHA. Use the cookie-import login instead.";
   }
   return "Login failed (no session cookie was set). Double-check the credentials, or try cookie import.";
+}
+
+function loginErrorFromAjax(html: string): string | null {
+  try {
+    const j = JSON.parse(html);
+    if (j && Array.isArray(j.errors) && j.errors.length) {
+      const first = j.errors[0];
+      if (Array.isArray(first) && first[0]) {
+        const code = String(first[0]);
+        if (/invalid.*pass|pass.*invalid/i.test(code)) return "Incorrect username or password.";
+        if (/lock|attempt/i.test(code)) return "Too many failed login attempts.";
+        return code;
+      }
+      return String(first);
+    }
+  } catch {}
+  return null;
 }

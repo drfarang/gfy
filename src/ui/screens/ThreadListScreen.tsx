@@ -14,6 +14,7 @@ export function ThreadListScreen({
   forumId,
   title,
   username,
+  forumPath,
   onOpen,
   onOpenInTab,
   onBack,
@@ -23,6 +24,7 @@ export function ThreadListScreen({
   forumId: number;
   title: string;
   username?: string;
+  forumPath?: string;
   onOpen: (t: ThreadSummary) => void;
   onOpenInTab?: (t: ThreadSummary) => void;
   onBack: () => void;
@@ -31,14 +33,14 @@ export function ThreadListScreen({
   const { cols } = useDimensions();
   const [viewPage, setViewPage] = useState(1);
   const { data, loading, error, reload } = useAsync(
-    () => loadThreadListView(client, forumId, viewPage),
-    [forumId, viewPage],
+    () => loadThreadListView(client, forumId, viewPage, forumPath),
+    [forumId, viewPage, forumPath],
   );
   const totalViews = data?.totalViews ?? 1;
   const pageLabel = data
     ? data.sourcePageStart === data.sourcePageEnd
-      ? `page ${data.sourcePageStart}/${data.totalSourcePages}`
-      : `pages ${data.sourcePageStart}-${data.sourcePageEnd}/${data.totalSourcePages}`
+      ? `page ${data.sourcePageStart}/${data.totalSourcePages} (${data.items.length} threads)`
+      : `pages ${data.sourcePageStart}-${data.sourcePageEnd}/${data.totalSourcePages} (${data.items.length} threads)`
     : `view ${viewPage}/${totalViews}`;
 
   useKeyboard((key) => {
@@ -83,7 +85,7 @@ export function ThreadListScreen({
         />
       )}
       <StatusBar
-        hints={`enter open · ⇧enter/t newtab · j/k move · n/p 2 pages · ${username ? "c new · " : ""}, settings · r refresh · ←/h back`}
+        hints={`enter open · ⇧enter/t newtab · j/k move · n/p views · ${username ? "c new · " : ""}, settings · r refresh · ←/h back`}
         status={username ? undefined : "log in to post"}
       />
     </box>

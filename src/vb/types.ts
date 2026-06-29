@@ -9,6 +9,8 @@ export interface Forum {
   category?: string;
   /** Child forums when the index nests them. */
   subforums?: Forum[];
+  /** Relative path for thread list, e.g. /forum/cat/forum-slug (vB6 slug routing) */
+  path?: string;
 }
 
 export interface ThreadSummary {

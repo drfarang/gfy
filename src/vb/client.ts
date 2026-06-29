@@ -28,6 +28,8 @@ export class VbClient {
   readonly http: HttpClient;
   private readonly jar: CookieJar;
   private session: Session | null;
+  /** id -> path (slug url) for forums discovered via forums() */
+  private forumPaths = new Map<number, string>();
 
   constructor(config: AppConfig, session?: Session | null) {
     this.jar = new CookieJar(session?.cookies);
@@ -105,11 +107,24 @@ export class VbClient {
   async forums(): Promise<Forum[]> {
     const { html } = await this.http.get("/");
     this.absorb(html);
-    return parseForums(html);
+    const list = parseForums(html);
+    for (const f of list) {
+      if (f.path) this.forumPaths.set(f.id, f.path);
+    }
+    return list;
   }
 
-  async threads(forumId: number, page = 1): Promise<Paged<ThreadSummary>> {
-    const { html } = await this.http.get(`/forumdisplay.php?f=${forumId}&page=${page}`);
+  async threads(forumId: number, page = 1, explicitPath?: string): Promise<Paged<ThreadSummary>> {
+    let path = explicitPath || this.forumPaths.get(forumId);
+    if (!path) {
+      // ensure map populated (populates on / )
+      await this.forums().catch(() => {});
+      path = this.forumPaths.get(forumId);
+    }
+    const listUrl = path
+      ? `${path}${path.includes("?") ? "&" : "?"}page=${page}`
+      : `/forumdisplay.php?f=${forumId}&page=${page}`;
+    const { html } = await this.http.get(listUrl);
     this.absorb(html);
     const result = parseThreadList(html);
     result.forumId ??= forumId;
@@ -133,52 +148,67 @@ export class VbClient {
   // --- post ---------------------------------------------------------------
 
   async reply(threadId: number, message: string): Promise<PostResult> {
-    const form = await this.http.get(`/newreply.php?do=newreply&t=${threadId}`);
-    this.absorb(form.html);
-    const tokens = parsePostFormTokens(form.html);
-    if (!tokens) return { ok: false, error: "Could not load the reply form - are you still logged in?" };
+    // vB6 no longer has /newreply.php; load the thread to get nodeid + securitytoken
+    const page = await this.http.get(`/showthread.php?t=${threadId}`);
+    this.absorb(page.html);
+    const tokens = parsePostFormTokens(page.html);
+    if (!tokens) return { ok: false, error: "Could not load thread for reply tokens - are you logged in?" };
 
-    const res = await this.http.postForm(`/newreply.php?do=postreply&t=${threadId}`, {
-      message,
-      wysiwyg: "0",
+    const parentId = tokens.extra?.nodeid || String(threadId);
+
+    // Try vB6 AJAX node save for comments/replies. Payload guessed from platform patterns.
+    const res = await this.http.postForm("/ajax/api/node/save", {
       securitytoken: tokens.securitytoken,
-      do: "postreply",
-      t: String(threadId),
-      p: "",
-      specifiedpost: "0",
+      parentid: parentId,
+      message,
+      rawtext: message,
+      wysiwyg: "0",
       parseurl: "1",
-      loggedinuser: tokens.loggedinuser ?? this.session?.userId ?? "",
-      s: "",
-      posthash: tokens.posthash ?? "",
-      poststarttime: tokens.poststarttime ?? "",
-      sbutton: "Submit Reply",
       signature: "1",
+      // some installs use these:
+      title: "",
+      htmltext: "",
     });
-    return interpretPost(res);
+    // interpret may need tweak; fall back to checking final location or success json-ish
+    if (res.html.includes("nodeId") || /thank|posted|success/i.test(res.html) || res.finalUrl.includes(String(threadId))) {
+      return { ok: true, url: res.finalUrl };
+    }
+    const errors = parseErrors(res.html);
+    if (errors.length) return { ok: false, error: errors.join(" ").slice(0,300) };
+    return { ok: false, error: "Reply may have failed (new platform posting is experimental). Check thread." , url: res.finalUrl };
   }
 
   async newThread(forumId: number, subject: string, message: string): Promise<PostResult> {
-    const form = await this.http.get(`/newthread.php?do=newthread&f=${forumId}`);
-    this.absorb(form.html);
-    const tokens = parsePostFormTokens(form.html);
-    if (!tokens) return { ok: false, error: "Could not load the new-thread form - are you still logged in?" };
+    // For new threads we still need channel; try legacy first (will likely 404) then note limitation.
+    const form = await this.http.get(`/newthread.php?do=newthread&f=${forumId}`).catch(() => null);
+    let html = form?.html ?? "";
+    if (!html) {
+      // fallback: load a known forum page to grab a channelid/security for this forumId
+      // user must have visited threads at least once for path, else fail gracefully
+      html = (await this.http.get("/")).html;
+    }
+    this.absorb(html);
+    const tokens = parsePostFormTokens(html) || { securitytoken: parseSecurityToken(html) || "guest", extra: {} };
+    if (!tokens.securitytoken || tokens.securitytoken === "guest") {
+      return { ok: false, error: "Cannot start thread without a valid security token (log in first)." };
+    }
 
-    const res = await this.http.postForm(`/newthread.php?do=postthread&f=${forumId}`, {
+    const res = await this.http.postForm("/ajax/api/node/save", {
+      securitytoken: tokens.securitytoken,
+      channelid: String(forumId),
       subject,
       message,
+      rawtext: message,
       wysiwyg: "0",
-      securitytoken: tokens.securitytoken,
-      do: "postthread",
-      f: String(forumId),
-      posthash: tokens.posthash ?? "",
-      poststarttime: tokens.poststarttime ?? "",
-      loggedinuser: tokens.loggedinuser ?? this.session?.userId ?? "",
-      s: "",
       parseurl: "1",
-      sbutton: "Submit New Thread",
       signature: "1",
     });
-    return interpretPost(res);
+    if (/thank you|posted|success|nodeid/i.test(res.html) || res.finalUrl.includes("/forum/")) {
+      return { ok: true, url: res.finalUrl };
+    }
+    const errors = parseErrors(res.html);
+    if (errors.length) return { ok: false, error: errors.join(" ").slice(0,300) };
+    return { ok: false, error: "New thread posting experimental on vB6 update; reply may work better." };
   }
 
   /** Capture a fresh security token from any authenticated page. */

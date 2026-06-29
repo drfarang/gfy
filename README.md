@@ -2,7 +2,7 @@
 
 A terminal client for **gfy.com** (the "GFY Webmaster Board"), built with [OpenTUI](https://github.com/anomalyco/opentui) + React on Bun.
 
-gfy.com runs **vBulletin 3.8.8** (no public API), so this app talks to it the way a browser does: it logs in, fetches pages over HTTP, and parses the HTML. Because vB 3.8 is frozen, the markup is stable and predictable.
+gfy.com runs **vBulletin 6.2** (no public API; previously 3.8), so this app talks to it the way a browser does: logs in, fetches pages, parses the HTML. The platform uses slug-based URLs (/forum/cat/forum-slug) and node/channel ids under the hood. Markup changed; parsers were updated for vB6 while keeping legacy support for tests.
 
 ## What it does
 
@@ -71,7 +71,7 @@ Two ways, switchable on the login screen with **Ctrl+K**:
 | Tabs           | `Shift+Enter`/`t` open thread in new background tab · `1`..`9` switch tab · `Ctrl+W` close tab |
 | Forums         | `enter` open · `,` settings · `r` refresh · `o` sign out · `q` quit |
 | Settings       | `Tab`/`↑↓` move fields · `←`/`→` change theme · `Ctrl+S` save · `Esc` cancel |
-| Thread list    | Shows two forum pages at once · `enter` open · `n`/`p` next/prev pair · `c` new thread · `r` refresh · `←` back |
+| Thread list    | Loads a larger window of threads (~50) · `enter` open · `n`/`p` next/prev view · `c` new thread · `r` refresh · `←` back |
 | Thread view    | `↑`/`↓` scroll · `n`/`p` next/prev page · `r` reply · `q` back |
 | Compose        | `Ctrl+S` send · `Ctrl+Q` select posts to quote · `Ctrl+E` emoji picker · `Esc` cancel · `Tab` switch subject/body (new thread) · drag an image in / `Ctrl+V` paste a clipboard image to upload it |
 | Anywhere       | `Ctrl+T` cycle theme · `Ctrl+F` hide/show the footer · `Ctrl+C` quit |
