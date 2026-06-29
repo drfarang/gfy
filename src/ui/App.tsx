@@ -222,7 +222,9 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           threadId={screen.threadId}
           title={screen.title}
           username={client.username}
-          onReply={() => nav.push({ kind: "composeReply", threadId: screen.threadId, title: screen.title })}
+          onReply={(quoteContext) =>
+            nav.push({ kind: "composeReply", threadId: screen.threadId, title: screen.title, quoteContext })
+          }
           onBack={() => nav.pop()}
         />
       );
@@ -233,6 +235,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           mode="reply"
           threadId={screen.threadId}
           title={screen.title}
+          quoteContext={screen.quoteContext}
           upload={upload}
           onDone={() => {
             nav.pop();

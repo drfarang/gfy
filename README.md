@@ -73,7 +73,7 @@ Two ways, switchable on the login screen with **Ctrl+K**:
 | Settings       | `Tab`/`↑↓` move fields · `←`/`→` change theme · `Ctrl+S` save · `Esc` cancel |
 | Thread list    | Shows two forum pages at once · `enter` open · `n`/`p` next/prev pair · `c` new thread · `r` refresh · `←` back |
 | Thread view    | `↑`/`↓` scroll · `n`/`p` next/prev page · `r` reply · `q` back |
-| Compose        | `Ctrl+S` send · `Esc` cancel · `Tab` switch subject/body (new thread) · drag an image in / `Ctrl+V` paste a clipboard image to upload it |
+| Compose        | `Ctrl+S` send · `Ctrl+Q` select posts to quote · `Ctrl+E` emoji picker · `Esc` cancel · `Tab` switch subject/body (new thread) · drag an image in / `Ctrl+V` paste a clipboard image to upload it |
 | Anywhere       | `Ctrl+T` cycle theme · `Ctrl+F` hide/show the footer · `Ctrl+C` quit |
 
 ## Config & data
