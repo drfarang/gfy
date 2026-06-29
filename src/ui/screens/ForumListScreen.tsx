@@ -52,7 +52,6 @@ export function ForumListScreen({
       ) : (
         <List<Forum>
           items={data ?? []}
-          chromeRows={5}
           onEnter={onOpen}
           onOpenInTab={onOpenInTab}
           emptyText="No forums found."

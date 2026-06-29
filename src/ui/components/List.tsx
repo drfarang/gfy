@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useKeyboard } from "@opentui/react";
-import { useDimensions } from "../hooks";
+import type { BoxRenderable } from "@opentui/core";
 import { theme } from "../theme";
 
 /** Rows moved per Ctrl+Up / Ctrl+Down jump. */
@@ -16,8 +16,6 @@ export interface ListProps<T> {
   onOpenInTab?: (item: T, index: number) => void;
   onBack?: () => void;
   active?: boolean;
-  /** Rows consumed by surrounding chrome (header + status + borders), to size the viewport. */
-  chromeRows?: number;
   emptyText?: string;
   /** Handle an extra key by name; return true if consumed. */
   extraKeys?: (name: string) => boolean;
@@ -30,14 +28,24 @@ export function List<T>({
   onOpenInTab,
   onBack,
   active = true,
-  chromeRows = 8,
   emptyText = "Nothing here.",
   extraKeys,
 }: ListProps<T>) {
-  const { rows } = useDimensions();
-  const viewport = Math.max(3, rows - chromeRows);
+  const [containerRows, setContainerRows] = useState(0);
+  // One row belongs to the scroll-position hint. The remaining rows are the
+  // actual item viewport, based on the height Yoga allocated to this list.
+  const viewport = Math.max(1, containerRows - 1);
   const [sel, setSel] = useState(0);
   const [offset, setOffset] = useState(0);
+  const measuredRows = useRef(0);
+  const updateContainerRows = useCallback(function (this: BoxRenderable) {
+    const next = this.height;
+    if (measuredRows.current === next) return;
+    measuredRows.current = next;
+    // Layout callbacks run during OpenTUI's render pass. Deferring the React
+    // update ensures the resulting render request is not dropped by OpenTUI.
+    process.nextTick(() => setContainerRows(next));
+  }, []);
 
   useEffect(() => {
     if (sel > items.length - 1) setSel(Math.max(0, items.length - 1));
@@ -98,7 +106,7 @@ export function List<T>({
     (offset + viewport < items.length ? "  vmore" : "");
 
   return (
-    <box style={{ flexDirection: "column", flexGrow: 1 }}>
+    <box onSizeChange={updateContainerRows} style={{ flexDirection: "column", flexGrow: 1 }}>
       {visible.map((item, i) => {
         const idx = offset + i;
         const selected = idx === sel;

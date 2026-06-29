@@ -64,7 +64,6 @@ export function ThreadListScreen({
       ) : (
         <List<ThreadSummary>
           items={data?.items ?? []}
-          chromeRows={5}
           onEnter={onOpen}
           onOpenInTab={onOpenInTab}
           onBack={onBack}
