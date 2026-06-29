@@ -7,6 +7,7 @@ import { List } from "../components/List";
 import { Header, StatusBar, Loading, ErrorView } from "../components/chrome";
 import { truncate, oneLine, fmtCount } from "../format";
 import { theme } from "../theme";
+import { loadThreadListView } from "../threadListPaging";
 
 export function ThreadListScreen({
   client,
@@ -28,15 +29,23 @@ export function ThreadListScreen({
   onNewThread: () => void;
 }) {
   const { cols } = useDimensions();
-  const [page, setPage] = useState(1);
-  const { data, loading, error, reload } = useAsync(() => client.threads(forumId, page), [forumId, page]);
-  const totalPages = data?.totalPages ?? 1;
+  const [viewPage, setViewPage] = useState(1);
+  const { data, loading, error, reload } = useAsync(
+    () => loadThreadListView(client, forumId, viewPage),
+    [forumId, viewPage],
+  );
+  const totalViews = data?.totalViews ?? 1;
+  const pageLabel = data
+    ? data.sourcePageStart === data.sourcePageEnd
+      ? `page ${data.sourcePageStart}/${data.totalSourcePages}`
+      : `pages ${data.sourcePageStart}-${data.sourcePageEnd}/${data.totalSourcePages}`
+    : `view ${viewPage}/${totalViews}`;
 
   useKeyboard((key) => {
     const n = String(key.name);
     if (n === "r") reload();
-    else if (n === "n") setPage((p) => Math.min(totalPages, p + 1));
-    else if (n === "p") setPage((p) => Math.max(1, p - 1));
+    else if (n === "n") setViewPage((page) => Math.min(totalViews, page + 1));
+    else if (n === "p") setViewPage((page) => Math.max(1, page - 1));
     else if (n === "c") {
       if (username) onNewThread();
     }
@@ -44,9 +53,12 @@ export function ThreadListScreen({
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1 }}>
-      <Header title={"GFY  ·  " + truncate(data?.title || title || "Forum", Math.max(10, cols - 16))} right={`page ${page}/${totalPages}`} />
+      <Header
+        title={"GFY  ·  " + truncate(data?.title || title || "Forum", Math.max(10, cols - pageLabel.length - 7))}
+        right={pageLabel}
+      />
       {loading ? (
-        <Loading label="Loading threads..." />
+        <Loading label="Loading thread pages..." />
       ) : error ? (
         <ErrorView message={error} />
       ) : (
@@ -72,7 +84,7 @@ export function ThreadListScreen({
         />
       )}
       <StatusBar
-        hints={`enter open · ⇧enter/t newtab · j/k move · n/p page · ${username ? "c new · " : ""}, settings · r refresh · ←/h back`}
+        hints={`enter open · ⇧enter/t newtab · j/k move · n/p 2 pages · ${username ? "c new · " : ""}, settings · r refresh · ←/h back`}
         status={username ? undefined : "log in to post"}
       />
     </box>
