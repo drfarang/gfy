@@ -1,70 +1,117 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 import type { Screen } from "./types";
 
-export type Stack = Screen[];
+export type Stack = readonly [Screen, ...Screen[]];
+
+export interface TabState {
+  readonly tabs: readonly Stack[];
+  readonly active: number;
+}
+
+export type TabAction =
+  | { type: "push"; screen: Screen }
+  | { type: "pop" }
+  | { type: "reset"; target: Screen | Stack }
+  | { type: "open"; screen: Screen }
+  | { type: "close"; index?: number }
+  | { type: "switch"; index: number };
+
+function copyStack(stack: readonly Screen[]): Stack {
+  const [first, ...rest] = stack;
+  return first ? [first, ...rest] : [{ kind: "forums" }];
+}
+
+function isStack(target: Screen | Stack): target is Stack {
+  return Array.isArray(target);
+}
+
+export function createTabState(initial: Stack): TabState {
+  return { tabs: [copyStack(initial)], active: 0 };
+}
+
+function editActive(state: TabState, edit: (stack: Stack) => Stack): TabState {
+  const current = state.tabs[state.active];
+  if (!current) return state;
+  const next = edit(current);
+  if (next === current) return state;
+  return {
+    ...state,
+    tabs: state.tabs.map((stack, index) => (index === state.active ? next : stack)),
+  };
+}
+
+/** Pure browser-style navigation over a non-empty list of non-empty stacks. */
+export function tabsReducer(state: TabState, action: TabAction): TabState {
+  switch (action.type) {
+    case "push":
+      return editActive(state, (stack) => [...stack, action.screen]);
+    case "pop":
+      return editActive(state, (stack) => (stack.length > 1 ? copyStack(stack.slice(0, -1)) : stack));
+    case "reset": {
+      const next = isStack(action.target) ? copyStack(action.target) : copyStack([action.target]);
+      return editActive(state, () => next);
+    }
+    case "open": {
+      const current = state.tabs[state.active];
+      if (!current) return state;
+      return { ...state, tabs: [...state.tabs, [...current, action.screen]] };
+    }
+    case "close": {
+      if (state.tabs.length <= 1) return state;
+      const index = action.index ?? state.active;
+      if (!Number.isInteger(index) || index < 0 || index >= state.tabs.length) return state;
+
+      const tabs = state.tabs.filter((_, candidate) => candidate !== index);
+      const active =
+        index < state.active
+          ? state.active - 1
+          : index === state.active
+            ? Math.min(state.active, tabs.length - 1)
+            : state.active;
+      return { tabs, active };
+    }
+    case "switch":
+      if (
+        !Number.isInteger(action.index) ||
+        action.index < 0 ||
+        action.index >= state.tabs.length ||
+        action.index === state.active
+      ) {
+        return state;
+      }
+      return { ...state, active: action.index };
+  }
+}
 
 /**
- * Browser-style tabs over the screen-stack navigation: each tab is its own
- * stack, and the active tab's stack behaves exactly like the old single nav
- * (push/pop/reset/replace). New tabs are opened from a list row (Shift+Enter)
- * in the background. The active-tab operations read `activeRef` so they stay
- * stable (usable as effect deps) without going stale.
+ * React wrapper around the pure tab reducer. Each tab owns a screen stack;
+ * opening a tab seeds it from the current stack and leaves it in the background.
  */
 export function useTabs(initial: Stack) {
-  const [tabs, setTabs] = useState<Stack[]>([initial]);
-  const [active, setActive] = useState(0);
-  const activeRef = useRef(0);
-  activeRef.current = Math.min(active, tabs.length - 1);
+  const [state, dispatch] = useReducer(tabsReducer, initial, createTabState);
 
-  const editActive = useCallback((fn: (st: Stack) => Stack) => {
-    setTabs((ts) => ts.map((st, i) => (i === activeRef.current ? fn(st) : st)));
-  }, []);
+  const push = useCallback((screen: Screen) => dispatch({ type: "push", screen }), []);
+  const pop = useCallback(() => dispatch({ type: "pop" }), []);
+  const reset = useCallback((target: Screen | Stack) => dispatch({ type: "reset", target }), []);
+  const openInTab = useCallback((screen: Screen) => dispatch({ type: "open", screen }), []);
+  const closeTab = useCallback((index?: number) => dispatch({ type: "close", index }), []);
+  const switchTo = useCallback((index: number) => dispatch({ type: "switch", index }), []);
 
-  const push = useCallback((s: Screen) => editActive((st) => [...st, s]), [editActive]);
-  const pop = useCallback(() => editActive((st) => (st.length > 1 ? st.slice(0, -1) : st)), [editActive]);
-  const reset = useCallback(
-    (s: Screen | Stack) => editActive(() => (Array.isArray(s) ? s : [s])),
-    [editActive],
+  const stack = state.tabs[state.active]!;
+  return useMemo(
+    () => ({
+      tabs: state.tabs,
+      active: state.active,
+      count: state.tabs.length,
+      stack,
+      current: stack[stack.length - 1]!,
+      push,
+      pop,
+      reset,
+      openInTab,
+      closeTab,
+      switchTo,
+    }),
+    [state.tabs, state.active, stack, push, pop, reset, openInTab, closeTab, switchTo],
   );
-  const replace = useCallback(
-    (s: Screen) => editActive((st) => [...st.slice(0, -1), s]),
-    [editActive],
-  );
-
-  /** Open a screen in a new background tab, seeded with the active stack so
-   *  "back" inside the new tab still reaches the list it came from. */
-  const openInTab = useCallback((s: Screen) => {
-    setTabs((ts) => [...ts, [...(ts[activeRef.current] ?? []), s]]);
-  }, []);
-
-  const closeTab = useCallback((index?: number) => {
-    setTabs((ts) => {
-      if (ts.length <= 1) return ts; // never close the last tab
-      const i = index ?? activeRef.current;
-      const next = ts.filter((_, j) => j !== i);
-      setActive((a) => (i < a ? a - 1 : Math.min(a, next.length - 1)));
-      return next;
-    });
-  }, []);
-
-  const switchTo = useCallback((index: number) => {
-    setActive(() => index);
-  }, []);
-
-  const idx = Math.min(active, tabs.length - 1);
-  const stack = tabs[idx] ?? [{ kind: "forums" } as Screen];
-  return {
-    tabs,
-    active: idx,
-    count: tabs.length,
-    stack,
-    current: stack[stack.length - 1] as Screen,
-    push,
-    pop,
-    reset,
-    replace,
-    openInTab,
-    closeTab,
-    switchTo,
-  };
 }

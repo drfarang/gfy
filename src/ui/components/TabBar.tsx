@@ -24,7 +24,7 @@ function tabLabel(stack: Stack): string {
 }
 
 /** Horizontal tab strip. Renders nothing for a single tab (no clutter). */
-export function TabBar({ tabs, active }: { tabs: Stack[]; active: number }) {
+export function TabBar({ tabs, active }: { tabs: readonly Stack[]; active: number }) {
   if (tabs.length <= 1) return null;
   return (
     <box style={{ flexDirection: "row", backgroundColor: theme.panel }}>

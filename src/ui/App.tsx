@@ -4,7 +4,7 @@ import { VbClient } from "../vb/client";
 import type { AppConfig } from "../config";
 import { saveSession, clearSession, saveConfig } from "../config";
 import type { Session } from "../vb/types";
-import { useTabs } from "./tabs";
+import { useTabs, type Stack } from "./tabs";
 import type { Screen } from "./types";
 import type { UploadTarget } from "../util/upload";
 import { theme, applyTheme, nextThemeName, themes } from "./theme";
@@ -21,7 +21,7 @@ import { ComposeScreen } from "./screens/ComposeScreen";
 // The app can open directly into a forum's thread list rather than the forum
 // index (config.defaultForumId; null = forum list). The forum list is kept
 // underneath on the stack, so "back" from the thread list still reaches it.
-function homeStack(config: AppConfig): Screen[] {
+function homeStack(config: AppConfig): Stack {
   const id = config.defaultForumId;
   if (id == null) return [{ kind: "forums" }];
   // f=26 is the built-in default; its real title fills in once threads load.
@@ -83,8 +83,8 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
   const [threadReload, setThreadReload] = useState(0);
 
   // Re-validate a restored session before trusting it. Runs exactly once on
-  // mount: `nav`'s identity changes every render, so it must NOT be a dep (and
-  // its setters are stable anyway) or this would re-fire and reset navigation.
+  // mount: `nav` includes live navigation state, so it must NOT be a dep (its
+  // action methods are stable) or later navigation would re-fire this effect.
   const verifiedRef = useRef(false);
   useEffect(() => {
     if (!initialSession || verifiedRef.current) return;
