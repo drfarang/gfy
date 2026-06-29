@@ -81,9 +81,9 @@ Two ways, switchable on the login screen with **Ctrl+K**:
 Stored under `~/.config/gfytui/` (override the directory with `GFYTUI_DIR`):
 
 - `session.json` - your saved session cookies (written with `0600` permissions; no password is stored).
-- `config.json` - optional overrides: `baseUrl`, `userAgent`, `requestDelayMs`, `editor`, `theme`, `defaultForumId` (the forum to open on launch; `null` lands on the forum list), and the image-upload target `uploadHost` / `uploadDir` / `uploadBaseUrl` (an scp host, its directory, and the public URL that serves it; `uploadHost: ""` disables upload). Images are uploaded over `scp`, so the host must be reachable with key-based SSH.
+- `config.json` - optional overrides: `baseUrl`, `userAgent`, `requestDelayMs`, `editor`, `theme`, and the image-upload target `uploadHost` / `uploadDir` / `uploadBaseUrl` (an scp host, its directory, and the public URL that serves it; `uploadHost: ""` disables upload). Images are uploaded over `scp`, so the host must be reachable with SSH key or agent authentication; upload passwords are not stored.
 
-The theme, default forum, and image-upload target can also be changed in-app: press `,` on the forum list to open **Settings**, edit the fields, and `Ctrl+S` to save (written back to `config.json`). Upload is disabled by default - set the upload fields there to enable it.
+The app opens forum 26 by default, with the full forum list available by going back. The theme and image-upload target can be changed in-app: press `,` on the forum list to open **Settings**, edit the fields, and `Ctrl+S` to save (written back to `config.json`). Theme changes preview immediately. Upload is disabled by default - set the upload fields there to enable it.
 
 Requests are throttled (default 800ms apart) to stay polite to the server.
 

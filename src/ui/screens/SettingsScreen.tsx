@@ -6,8 +6,7 @@ import { theme, themeNames } from "../theme";
 
 // Editable text fields, in tab order after the theme picker (index 0).
 const TEXT_FIELDS = [
-  { key: "defaultForumId", label: "Default forum id", hint: "blank = open the forum list" },
-  { key: "uploadHost", label: "Upload host", hint: "ssh/scp host or alias; blank disables image upload" },
+  { key: "uploadHost", label: "Upload SSH host", hint: "user@host or SSH alias; key/agent auth required; blank disables" },
   { key: "uploadDir", label: "Upload dir", hint: "directory on the host, e.g. /var/www/uploads" },
   { key: "uploadBaseUrl", label: "Upload URL base", hint: "public URL that serves it, e.g. https://uploads.example.com/" },
 ] as const;
@@ -16,16 +15,17 @@ type TextKey = (typeof TEXT_FIELDS)[number]["key"];
 
 export function SettingsScreen({
   config,
+  onThemeChange,
   onSave,
   onCancel,
 }: {
   config: AppConfig;
+  onThemeChange: (name: string) => void;
   onSave: (next: AppConfig) => void;
   onCancel: () => void;
 }) {
   const [themeName, setThemeName] = useState(config.theme);
   const [vals, setVals] = useState<Record<TextKey, string>>({
-    defaultForumId: config.defaultForumId == null ? "" : String(config.defaultForumId),
     uploadHost: config.uploadHost,
     uploadDir: config.uploadDir,
     uploadBaseUrl: config.uploadBaseUrl,
@@ -34,19 +34,22 @@ export function SettingsScreen({
   const [focus, setFocus] = useState(0);
   const fieldCount = 1 + TEXT_FIELDS.length;
 
-  const cycleTheme = (dir: number) =>
-    setThemeName((t) => {
-      const i = themeNames.indexOf(t);
-      return themeNames[(i + dir + themeNames.length) % themeNames.length]!;
-    });
+  function cycleTheme(dir: number) {
+    const current = Math.max(0, themeNames.indexOf(themeName));
+    const next = themeNames[(current + dir + themeNames.length) % themeNames.length]!;
+    setThemeName(next);
+    onThemeChange(next);
+  }
+
+  function cancel() {
+    onThemeChange(config.theme);
+    onCancel();
+  }
 
   function save() {
-    const did = vals.defaultForumId.trim();
-    const forumId = did === "" ? null : Number.isFinite(Number(did)) ? Number(did) : config.defaultForumId;
     onSave({
       ...config,
       theme: themeName,
-      defaultForumId: forumId,
       uploadHost: vals.uploadHost.trim(),
       uploadDir: vals.uploadDir.trim(),
       uploadBaseUrl: vals.uploadBaseUrl.trim(),
@@ -58,7 +61,7 @@ export function SettingsScreen({
     const ctrl = Boolean((key as { ctrl?: boolean }).ctrl);
     const shift = Boolean((key as { shift?: boolean }).shift);
     if (ctrl && n === "s") return save();
-    if (n === "escape") return onCancel();
+    if (n === "escape") return cancel();
     if (n === "tab" || n === "down" || n === "up") {
       const dir = n === "up" || shift ? -1 : 1;
       return setFocus((i) => (i + dir + fieldCount) % fieldCount);
@@ -97,7 +100,9 @@ export function SettingsScreen({
               />
             </box>
           ))}
-          <text fg={theme.dim}>{TEXT_FIELDS[Math.max(0, focus - 1)]!.hint}</text>
+          <text fg={theme.dim}>
+            {focus === 0 ? "Theme changes preview immediately; Ctrl+S saves it" : TEXT_FIELDS[focus - 1]!.hint}
+          </text>
         </box>
       </box>
       <StatusBar hints="Tab/↑↓ move · ←/→ change theme · Ctrl+S save · Esc cancel" />
