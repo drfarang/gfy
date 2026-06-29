@@ -111,27 +111,29 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
   }, [client, initialSession]);
 
   useKeyboard((key) => {
-    const ctrl = Boolean((key as { ctrl?: boolean }).ctrl);
+    const modifiers = key as { ctrl?: boolean; meta?: boolean; option?: boolean; super?: boolean };
+    const ctrl = Boolean(modifiers.ctrl);
+    const plain = !ctrl && !modifiers.meta && !modifiers.option && !modifiers.super;
     const name = String(key.name);
     // Screens with a focused text field, where plain keys are real input.
     const kind = nav.current.kind;
     const typing = kind === "login" || kind === "settings" || kind === "composeReply" || kind === "composeThread";
-    if (!ctrl) {
+    if (plain) {
       if (typing) return;
-      // `,` opens Settings; `[`/`]` cycle to the prev/next tab (wrapping).
+      // `,` opens Settings; digits select a tab; `[`/`]` cycle with wrapping.
       if (name === ",") nav.push({ kind: "settings" });
       else if (name === "[") nav.switchTo((nav.active - 1 + nav.count) % nav.count);
       else if (name === "]") nav.switchTo((nav.active + 1) % nav.count);
+      else if (/^[1-9]$/.test(name)) nav.switchTo(Number(name) - 1);
       return;
     }
+    if (!ctrl) return;
     if (name === "c") return renderer.destroy();
     if (name === "t") return cycleTheme();
     if (name === "f") return setFooterVisible((v) => !v);
-    // Tab switch/close - but not while a text field is focused, where Ctrl+W is
-    // "delete word" and Ctrl+digit shouldn't yank the user to another tab.
+    // Tab close—but not while a text field is focused, where Ctrl+W deletes a word.
     if (typing) return;
     if (name === "w") nav.closeTab();
-    else if (/^[1-9]$/.test(name)) nav.switchTo(Number(name) - 1);
   });
 
   if (booting) {

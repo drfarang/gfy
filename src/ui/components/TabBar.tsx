@@ -39,7 +39,7 @@ export function TabBar({ tabs, active }: { tabs: readonly Stack[]; active: numbe
         );
       })}
       <box style={{ flexGrow: 1 }} />
-      <text fg={theme.dim}>{" ^1-9 / [ ] switch · ^w close "}</text>
+      <text fg={theme.dim}>{" 1-9 / [ ] switch · ^w close "}</text>
     </box>
   );
 }

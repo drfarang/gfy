@@ -50,7 +50,7 @@ export function List<T>({
 
   useKeyboard((key) => {
     if (!active) return;
-    // Ctrl/Meta combos are global (theme, tab close/switch, quit) and handled in
+    // Ctrl/Meta combos are global (theme, tab close, quit) and handled in
     // App. Ignore them here so e.g. Ctrl+T doesn't also fire the plain-`t` newtab.
     if ((key as { ctrl?: boolean }).ctrl || (key as { meta?: boolean }).meta) return;
     const raw = String(key.name);

@@ -68,7 +68,7 @@ Two ways, switchable on the login screen with **Ctrl+K**:
 | Context        | Keys |
 | -------------- | ---- |
 | Lists          | `j`/`k` or arrows move · `J`/`K` jump 10 · `enter`/`→` open · `Shift+Enter`/`t` open in new tab · `←`/`esc`/`backspace` back · `g`/`G` top/bottom · `PgUp`/`PgDn` page |
-| Tabs           | `Shift+Enter`/`t` open thread in new background tab · `Ctrl+1`..`Ctrl+9` switch tab · `Ctrl+W` close tab |
+| Tabs           | `Shift+Enter`/`t` open thread in new background tab · `1`..`9` switch tab · `Ctrl+W` close tab |
 | Forums         | `enter` open · `,` settings · `r` refresh · `o` sign out · `q` quit |
 | Settings       | `Tab`/`↑↓` move fields · `←`/`→` change theme · `Ctrl+S` save · `Esc` cancel |
 | Thread list    | `enter` open · `n`/`p` next/prev page · `c` new thread · `r` refresh · `←` back |
