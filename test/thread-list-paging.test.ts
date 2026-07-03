@@ -21,43 +21,43 @@ function reader(pages: Record<number, Paged<ThreadSummary>>, calls: number[]): T
 }
 
 describe("loadThreadListView", () => {
-  test("loads many source pages (for ~50 threads) and merges them", async () => {
+  test("loads the bounded source-page window and merges rows", async () => {
     const calls: number[] = [];
-    // provide data for first 10 source pages
     const mockPages: Record<number, Paged<ThreadSummary>> = {};
-    for (let p = 1; p <= 10; p++) {
+    for (let p = 1; p <= 5; p++) {
       mockPages[p] = page(p, 20, [thread(p * 10 + 1), thread(p * 10 + 2)]);
     }
     const result = await loadThreadListView(reader(mockPages, calls), 26, 1);
 
-    expect(calls[0]).toBe(1);
-    expect(result.items.length).toBeGreaterThanOrEqual(2); // in test setup only first pages are defined; variants + nominal give at least the first page data
+    expect(calls).toEqual([1, 2, 3, 4, 5]);
+    expect(result.items.map((item) => item.id)).toEqual([11, 12, 21, 22, 31, 32, 41, 42, 51, 52]);
     expect(result.viewPage).toBe(1);
     expect(result.sourcePageStart).toBe(1);
-    expect(result.totalSourcePages).toBeGreaterThanOrEqual(10);
+    expect(result.sourcePageEnd).toBe(5);
+    expect(result.totalSourcePages).toBe(20);
   });
 
   test("maps each UI page to the next window of source pages", async () => {
     const calls: number[] = [];
     const mock: Record<number, Paged<ThreadSummary>> = {
-      11: page(11, 30, [thread(110)]),
-      12: page(12, 30, [thread(120)]),
+      6: page(6, 30, [thread(60)]),
+      7: page(7, 30, [thread(70)]),
     };
     const result = await loadThreadListView(reader(mock, calls), 26, 2);
 
-    expect(calls[0]).toBe(3);
-    expect(result.sourcePageStart).toBe(3);
-    expect(result.sourcePageEnd).toBeGreaterThanOrEqual(3);
+    expect(calls).toEqual([6, 7, 8, 9, 10]);
+    expect(result.sourcePageStart).toBe(6);
+    expect(result.sourcePageEnd).toBe(10);
   });
 
   test("loads only the final pages in the last view", async () => {
     const calls: number[] = [];
-    const result = await loadThreadListView(reader({ 18: page(18, 20, [thread(180)]), 19: page(19, 20, [thread(190)]), 20: page(20, 20, [thread(200)]) }, calls), 26, 2);
+    const result = await loadThreadListView(reader({ 16: page(16, 20, [thread(160)]), 17: page(17, 20, [thread(170)]), 18: page(18, 20, [thread(180)]), 19: page(19, 20, [thread(190)]), 20: page(20, 20, [thread(200)]) }, calls), 26, 4);
 
-    // view 2 starts at page 11, loads up to 20
-    expect(calls.length).toBeGreaterThan(0);
-    expect(result.items.length).toBeGreaterThan(0);
-    expect(result.sourcePageStart).toBeGreaterThanOrEqual(3);
+    expect(calls).toEqual([16, 17, 18, 19, 20]);
+    expect(result.items.map((item) => item.id)).toEqual([160, 170, 180, 190, 200]);
+    expect(result.sourcePageStart).toBe(16);
+    expect(result.sourcePageEnd).toBe(20);
   });
 
   test("deduplicates threads repeated across the window of source pages", async () => {
@@ -65,7 +65,10 @@ describe("loadThreadListView", () => {
     const mock: Record<number, Paged<ThreadSummary>> = {
       1: page(1, 5, [thread(1, true), thread(2)]),
     };
-    for (let p=2; p<=10; p++) mock[p] = page(p, 5, [thread(1, true), thread(10 + p)]);
+    mock[2] = page(2, 5, [thread(1, true), thread(12)]);
+    mock[3] = page(3, 5, [thread(1, true), thread(13)]);
+    mock[4] = page(4, 5, [thread(1, true), thread(14)]);
+    mock[5] = page(5, 5, [thread(1, true), thread(15)]);
     const result = await loadThreadListView(reader(mock, calls), 26, 1);
 
     expect(result.items.map((item) => item.id)).toContain(1);

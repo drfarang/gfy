@@ -3,7 +3,7 @@ import { EmojiPicker } from "../components/EmojiPicker";
 import { QuotePicker } from "../components/QuotePicker";
 import type { ComposeScreenProps } from "../composer";
 import { useComposerController } from "../hooks/useComposerController";
-import { theme } from "../theme";
+import { fieldThemeProps, theme } from "../theme";
 
 export function ComposeScreen(props: ComposeScreenProps) {
   const { bodyRef, state, setSubject, setQuoteIndex, insertEmoji, insertSelectedQuotes } =
@@ -13,6 +13,7 @@ export function ComposeScreen(props: ComposeScreenProps) {
   const regularHints = `Ctrl+S send${props.mode === "reply" ? " · Ctrl+Q quote" : ""} · Ctrl+E emoji · Esc cancel${
     props.mode === "thread" ? " · Tab subject/body" : ""
   }${uploadHint}`;
+  const fieldColors = fieldThemeProps();
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1 }}>
@@ -21,7 +22,12 @@ export function ComposeScreen(props: ComposeScreenProps) {
         <text fg={theme.accent2}>{heading}</text>
         {props.mode === "thread" ? (
           <box title="Subject" style={{ border: true, height: 3 }}>
-            <input placeholder="thread title" focused={state.focus === "subject"} onInput={setSubject} />
+            <input
+              {...fieldColors}
+              placeholder="thread title"
+              focused={state.focus === "subject"}
+              onInput={setSubject}
+            />
           </box>
         ) : null}
         {state.quoteOpen && props.mode === "reply" ? (
@@ -39,7 +45,12 @@ export function ComposeScreen(props: ComposeScreenProps) {
           <EmojiPicker focused={state.focus === "emoji"} onSelect={insertEmoji} />
         ) : null}
         <box title="Message" style={{ border: true, flexGrow: 1 }}>
-          <textarea ref={bodyRef} placeholder="Write your post (BBCode allowed)..." focused={state.focus === "body"} />
+          <textarea
+            {...fieldColors}
+            ref={bodyRef}
+            placeholder="Write your post (BBCode allowed)..."
+            focused={state.focus === "body"}
+          />
         </box>
       </box>
       <StatusBar

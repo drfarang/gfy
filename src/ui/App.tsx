@@ -6,7 +6,7 @@ import { saveSession, clearSession, saveConfig } from "../config";
 import type { Session } from "../vb/types";
 import { useTabs, type Stack } from "./tabs";
 import type { UploadTarget } from "../util/upload";
-import { theme, applyTheme, nextThemeName, themes } from "./theme";
+import { theme, applyTheme, nextThemeName, resolveThemeName } from "./theme";
 import { Loading, FooterContext } from "./components/chrome";
 import { TabBar } from "./components/TabBar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -48,7 +48,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
 
   // Theme switching: `themeRef` always holds the live name (no stale closure),
   // `themeTick` just forces a re-render so the mutated `theme` re-colors the UI.
-  const themeRef = useRef(themes[config.theme] ? config.theme : "tokyo-night");
+  const themeRef = useRef<string>(resolveThemeName(config.theme));
   const [, setThemeTick] = useState(0);
   const applyThemeLive = (next: string) => {
     if (!applyTheme(next)) return;
@@ -67,7 +67,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
 
   // Persist edited settings, applying the theme immediately.
   const saveSettings = (next: AppConfig) => {
-    applyThemeLive(themes[next.theme] ? next.theme : themeRef.current);
+    applyThemeLive(next.theme);
     setConfig(next);
     saveConfig(next);
   };
@@ -206,9 +206,9 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           forumId={screen.forumId}
           title={screen.title}
           username={client.username}
-          forumPath={(screen as any).forumPath}
-          onOpen={(t) => nav.push({ kind: "thread", threadId: t.id, title: t.title })}
-          onOpenInTab={(t) => nav.openInTab({ kind: "thread", threadId: t.id, title: t.title })}
+          forumPath={screen.forumPath}
+          onOpen={(t) => nav.push({ kind: "thread", threadId: t.id, title: t.title, threadPath: t.path })}
+          onOpenInTab={(t) => nav.openInTab({ kind: "thread", threadId: t.id, title: t.title, threadPath: t.path })}
           onBack={() => nav.pop()}
           onNewThread={() => nav.push({ kind: "composeThread", forumId: screen.forumId, title: screen.title })}
         />
@@ -219,10 +219,17 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           key={`thread-${screen.threadId}-${threadReload}`}
           client={client}
           threadId={screen.threadId}
+          threadPath={screen.threadPath}
           title={screen.title}
           username={client.username}
           onReply={(quoteContext) =>
-            nav.push({ kind: "composeReply", threadId: screen.threadId, title: screen.title, quoteContext })
+            nav.push({
+              kind: "composeReply",
+              threadId: screen.threadId,
+              title: screen.title,
+              threadPath: screen.threadPath,
+              quoteContext,
+            })
           }
           onBack={() => nav.pop()}
         />
@@ -233,6 +240,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           client={client}
           mode="reply"
           threadId={screen.threadId}
+          threadPath={screen.threadPath}
           title={screen.title}
           quoteContext={screen.quoteContext}
           upload={upload}

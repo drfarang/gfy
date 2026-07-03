@@ -19,6 +19,33 @@ const FORUMS = fixture("forums.html");
 const THREADLIST = fixture("threadlist.html");
 const THREAD = fixture("thread.html");
 
+const VB6_THREAD_LIST = `
+  <html data-channelid="33" data-pagenum="1" data-maxpages="4">
+    <head><title>Fucking Around &amp; Business Discussion - GFY</title></head>
+    <body>
+      <article class="topic-row">
+        <a class="topic-title" href="https://gfy.com/forum/simply-business/fucking-around-business-discussion/31462528-example-topic?p=31462536#post31462536">
+          Example topic
+        </a>
+        <a href="/member/42-example-user">ExampleUser</a>
+        <span>18 responses 540 views</span>
+      </article>
+    </body>
+  </html>`;
+
+const VB6_THREAD = `
+  <html data-pagenum="2" data-maxpages="3">
+    <head><title>Example topic - GFY</title></head>
+    <body>
+      <article class="b-post" data-node-id="31462536">
+        <a href="/member/42-example-user">ExampleUser</a>
+        <a class="js-show-post-link" href="#post31462536">#6</a>
+        <div class="js-post-info">#6 06-29-2026 10:15 AM</div>
+        <div class="js-post__content-text">Current platform post body</div>
+      </article>
+    </body>
+  </html>`;
+
 describe("parseForums", () => {
   const forums = parseForums(FORUMS);
 
@@ -61,6 +88,38 @@ describe("parseThreadList", () => {
     expect(list.page).toBe(1);
     expect(list.totalPages).toBe(3);
     expect(list.forumId).toBe(26);
+  });
+});
+
+describe("vB6 parsers", () => {
+  test("retains a canonical thread path from the topic link", () => {
+    const list = parseThreadList(VB6_THREAD_LIST);
+
+    expect(list.items).toHaveLength(1);
+    expect(list.items[0]).toMatchObject({
+      id: 31462528,
+      title: "Example topic",
+      author: "ExampleUser",
+      replies: 18,
+      path: "/forum/simply-business/fucking-around-business-discussion/31462528-example-topic",
+    });
+    expect(list.page).toBe(1);
+    expect(list.totalPages).toBe(4);
+    expect(list.forumId).toBe(33);
+  });
+
+  test("parses a current-platform post and pagination metadata", () => {
+    const thread = parseThread(VB6_THREAD);
+
+    expect(thread.items).toHaveLength(1);
+    expect(thread.items[0]).toMatchObject({
+      id: 31462536,
+      author: "ExampleUser",
+      index: 6,
+      body: "Current platform post body",
+    });
+    expect(thread.page).toBe(2);
+    expect(thread.totalPages).toBe(3);
   });
 });
 
@@ -125,6 +184,13 @@ describe("auth / session helpers", () => {
 describe("parsePagination", () => {
   test("reads 'Page X of Y'", () => {
     expect(parsePagination("...Page 4 of 9...")).toEqual({ page: 4, totalPages: 9 });
+  });
+
+  test("combines vB6 data-pagenum with page links", () => {
+    expect(parsePagination('<div data-pagenum="2"></div><a href="/forum/foo/page1002">last</a>')).toEqual({
+      page: 2,
+      totalPages: 1002,
+    });
   });
 
   test("defaults to a single page when absent", () => {

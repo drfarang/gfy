@@ -147,7 +147,7 @@ async function cmdClient(): Promise<void> {
   const firstThread = list.items.find((t) => !t.sticky) ?? list.items[0];
   if (!firstThread) return;
 
-  const thread = await client.thread(firstThread.id, 1);
+  const thread = await client.thread(firstThread.id, 1, firstThread.path);
   console.log(`\nthread t${firstThread.id} "${thread.title}" (page ${thread.page}/${thread.totalPages}): ${thread.items.length} posts`);
   const first = thread.items[0];
   if (first) console.log(`  #${first.index} by ${first.author}: ${first.body.replace(/\n/g, " ").slice(0, 90)}`);

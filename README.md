@@ -13,6 +13,7 @@ gfy.com runs **vBulletin 6.2** (no public API; previously 3.8), so this app talk
 - Reply to a thread (drag or paste an image to auto-upload it and insert the `[IMG]` tag)
 - Start a new thread
 - Open threads in multiple tabs
+- Switch between Omarchy-derived color themes
 - Persists your session so you stay logged in between runs
 
 ## Requirements
@@ -83,7 +84,9 @@ Stored under `~/.config/gfytui/` (override the directory with `GFYTUI_DIR`):
 - `session.json` - your saved session cookies (written with `0600` permissions; no password is stored).
 - `config.json` - optional overrides: `baseUrl`, `userAgent`, `requestDelayMs`, `editor`, `theme`, and the image-upload target `uploadHost` / `uploadDir` / `uploadBaseUrl` (an scp host, its directory, and the public URL that serves it; `uploadHost: ""` disables upload). Images are uploaded over `scp`, so the host must be reachable with SSH key or agent authentication; upload passwords are not stored.
 
-The app opens forum 26 by default, with the full forum list available by going back. The theme and image-upload target can be changed in-app: press `,` on the forum list to open **Settings**, edit the fields, and `Ctrl+S` to save (written back to `config.json`). Theme changes preview immediately. Upload is disabled by default - set the upload fields there to enable it.
+The app opens forum 33 (Fucking Around & Business Discussion) by default, with the full forum list available by going back. The theme and image-upload target can be changed in-app: press `,` on the forum list to open **Settings**, edit the fields, and `Ctrl+S` to save (written back to `config.json`). Theme changes preview immediately. Upload is disabled by default - set the upload fields there to enable it.
+
+Themes use Omarchy's `colors.toml` palette model mapped into TUI roles. Available themes include `tokyo-night`, `catppuccin`, `catppuccin-latte`, `gruvbox`, `nord`, `kanagawa`, `everforest`, `matte-black`, `rose-pine`, `vantablack`, and the rest of the bundled Omarchy palettes.
 
 Requests are throttled (default 800ms apart) to stay polite to the server.
 
@@ -92,7 +95,7 @@ Requests are throttled (default 800ms apart) to stay polite to the server.
 ```
 src/
   vb/              vBulletin client (pure, no UI - independently testable)
-    http.ts        fetch wrapper: browser-like headers, cookie jar, latin1 decode,
+    http.ts        fetch wrapper: browser-like headers, cookie jar, HTML decode,
                    manual redirect following (vB sets auth cookies on a 302),
                    Cloudflare-challenge detection
     cookies.ts     minimal cookie jar
@@ -101,6 +104,7 @@ src/
     client.ts      high-level API: forums(), threads(), thread(), reply(), newThread()
   ui/              OpenTUI React UI
     App.tsx        screen-stack router + session bootstrap + global quit
+    theme.ts       Omarchy-style palettes mapped to TUI semantic color roles
     screens/       Login, ForumList, ThreadList, ThreadView, Compose
     components/    List (keyboard-driven, windowed), header/status/loading/error
   config.ts        config + session persistence
@@ -110,7 +114,7 @@ src/
 
 - **Terms of service.** Automated access may be discouraged by the forum. This is a personal client for your own account; it throttles requests and sends a normal User-Agent. Use it responsibly.
 - **Cloudflare.** The site is behind Cloudflare. GETs and the login POST currently pass through with a normal User-Agent. If that ever changes, use the cookie-import login.
-- **Scraping is markup-coupled.** Parsers target vB 3.8.8's templates. They're defensive, but a forum-side template change could require selector tweaks (`src/vb/parse.ts`).
+- **Scraping is markup-coupled.** Parsers target the current vBulletin 6 templates and retain legacy vB 3.8 support. They're defensive, but a forum-side template change could require selector tweaks (`src/vb/parse.ts`).
 - **Password masking** isn't implemented on the login screen yet - prefer cookie import if that matters to you.
 
 ## Development

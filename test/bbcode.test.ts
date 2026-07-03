@@ -48,4 +48,29 @@ describe("htmlToText", () => {
     expect(out).not.toContain("Quote:");
     expect(out).not.toContain("View Post");
   });
+
+  test("renders a vB6 quote block once, not as a double-nested quote", () => {
+    const html = `
+      <div class="bbcode_container">
+        <div class="bbcode_quote">
+          <div class="quote_container">
+            <div class="bbcode_quote_container b-icon-fa fa-quote-left"></div>
+            <div class="bbcode_postedby">
+              Originally posted by <strong>JesseQuinn</strong>
+              <a href="x" title="View Post">View Post</a>
+            </div>
+            <div class="message">quoted line<br><br>second line</div>
+          </div>
+        </div>
+      </div>
+      reply text`;
+
+    const out = htmlToText(html);
+    expect(out).toContain("> JesseQuinn wrote:");
+    expect(out).toContain("> quoted line");
+    expect(out).toContain("> second line");
+    expect(out).toContain("reply text");
+    expect(out).not.toContain("> >");
+    expect(out).not.toContain("View Post");
+  });
 });

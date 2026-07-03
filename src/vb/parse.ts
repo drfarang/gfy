@@ -203,7 +203,14 @@ export function parseThreadList(html: string): Paged<ThreadSummary> {
     const lastPost = clean(container.find("[class*=\"last\"], time, [class*=\"date\"]").first().text()) || rowText.match(/\d{1,2}[-/]\d{1,2}[-/]\d{2,4}[^,]*|\d{1,2}:\d{2}\s*(?:AM|PM)?/i)?.[0] || undefined;
     const sticky = /sticky|pin|announce/i.test(rowText) || /pinned/i.test(a.closest("[class]").attr("class") || "");
 
-    items.push({ id, title, author, replies, lastPost, sticky });
+    let path: string | undefined;
+    try {
+      path = new URL(href, "https://gfy.com").pathname.replace(/\/+$/, "") || "/";
+    } catch {
+      path = href.split(/[?#]/, 1)[0]?.replace(/\/+$/, "") || undefined;
+    }
+
+    items.push({ id, title, path, author, replies, lastPost, sticky });
   });
 
   if (items.length > 0) {
@@ -361,6 +368,11 @@ export function parsePagination(html: string): { page: number; totalPages: numbe
   const p = numOr(html.match(/data-pagenum=["']?(\d+)/i)?.[1]);
   const mp = numOr(html.match(/data-maxpages=["']?(\d+)/i)?.[1] || html.match(/maxpages=["']?(\d+)/i)?.[1]);
   if (p && mp) return { page: p, totalPages: mp };
+  const relLast = numOr(
+    html.match(/<[^>]+rel=["']last["'][^>]+href=["'][^"']*\/page(\d+)/i)?.[1] ||
+      html.match(/<[^>]+href=["'][^"']*\/page(\d+)[^"']*["'][^>]+rel=["']last["']/i)?.[1],
+  );
+  if (relLast) return { page: p || 1, totalPages: Math.max(p || 1, relLast) };
   // Find the highest *plausible* page number. vB6 sometimes injects huge bogus numbers (e.g. page100011).
   const all = [...html.matchAll(/\/page(\d+)/gi)].map((m) => Number(m[1])).filter((n) => Number.isFinite(n) && n > 0);
   if (all.length > 0) {
@@ -375,12 +387,13 @@ export function parsePagination(html: string): { page: number; totalPages: numbe
         break;
       }
     }
-    if (maxPg >= 2) return { page: 1, totalPages: maxPg };
+    if (maxPg >= 2) return { page: p || 1, totalPages: Math.max(p || 1, maxPg) };
   }
 
   // fallback to next/rel only
   const nextPg = html.match(/\/page(\d+)/i)?.[1];
-  if (nextPg) return { page: 1, totalPages: Math.max(2, Number(nextPg)) };
+  if (nextPg) return { page: p || 1, totalPages: Math.max(p || 1, 2, Number(nextPg)) };
+  if (p) return { page: p, totalPages: p };
   return { page: 1, totalPages: 1 };
 }
 

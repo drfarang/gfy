@@ -29,8 +29,9 @@ const BAR = "▎";
 /**
  * Render a text chunk. The parser emits quotes as "> " prefixed lines, with
  * "> NAME wrote:" as the attribution and repeated ">" for nesting depth. We
- * turn each quoted line into an accent gutter bar with the author highlighted
- * (same blue as post authors) and the body dimmed; normal lines render plainly.
+ * turn each quoted line into a gutter bar with readable quote-specific text
+ * colors. Do not use the generic dim role for quoted body text: in several
+ * Omarchy palettes that color is intentionally close to the background.
  */
 function renderTextLines(part: string, keyBase: number): ReactNode[] {
   const lines = part.split("\n");
@@ -66,7 +67,7 @@ function renderTextLines(part: string, keyBase: number): ReactNode[] {
       if (!prevAttribution) {
         out.push(
           <text key={`${keyBase}-q${i}`}>
-            <span fg={theme.accent}>{BAR.repeat(depth)}</span>
+            <span fg={theme.quoteBar}>{BAR.repeat(depth)}</span>
           </text>,
         );
       }
@@ -76,8 +77,8 @@ function renderTextLines(part: string, keyBase: number): ReactNode[] {
     const attr = content.match(/^(.+) wrote:$/);
     out.push(
       <text key={`${keyBase}-q${i}`}>
-        <span fg={theme.accent}>{BAR.repeat(depth) + " "}</span>
-        <span fg={attr ? theme.accent : theme.dim}>{attr ? attr[1] : content}</span>
+        <span fg={theme.quoteBar}>{BAR.repeat(depth) + " "}</span>
+        <span fg={attr ? theme.quoteMeta : theme.quoteFg}>{attr ? attr[1] : content}</span>
       </text>,
     );
     prevAttribution = Boolean(attr);
@@ -89,6 +90,7 @@ function renderTextLines(part: string, keyBase: number): ReactNode[] {
 export function ThreadViewScreen({
   client,
   threadId,
+  threadPath,
   title,
   username,
   onReply,
@@ -96,6 +98,7 @@ export function ThreadViewScreen({
 }: {
   client: VbClient;
   threadId: number;
+  threadPath?: string;
   title: string;
   username?: string;
   onReply: (context?: QuoteContext) => void;
@@ -105,7 +108,10 @@ export function ThreadViewScreen({
   // Open on the last page ("last" lets vBulletin resolve which page that is);
   // once loaded we track the real page number for n/p navigation.
   const [page, setPage] = useState<number | "last">("last");
-  const { data, loading, error } = useAsync(() => client.thread(threadId, page), [threadId, page]);
+  const { data, loading, error } = useAsync(
+    () => client.thread(threadId, page, threadPath),
+    [threadId, threadPath, page],
+  );
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ?? (typeof page === "number" ? page : 1);
 

@@ -16,6 +16,8 @@ export interface Forum {
 export interface ThreadSummary {
   id: number;
   title: string;
+  /** Canonical relative path for vB6 slug routing. */
+  path?: string;
   author?: string;
   replies?: number;
   views?: number;

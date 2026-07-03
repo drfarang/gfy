@@ -67,6 +67,7 @@ function renderNode(node: DomNode): string {
   }
 
   const cls = node.attribs?.class ?? "";
+  const classes = new Set(cls.split(/\s+/).filter(Boolean));
 
   // vBulletin quote blocks render as:
   //   <div class="smallfont">Quote:</div>
@@ -77,18 +78,23 @@ function renderNode(node: DomNode): string {
   // Drop the bare "Quote:" label, turn the attribution into "NAME wrote:", and
   // prefix the quoted body with "> ".
   const flatInner = inner.replace(/\s+/g, " ").trim();
+  if (classes.has("bbcode_quote_container")) {
+    return "";
+  }
   if (tag === "div" && /\bsmallfont\b/.test(cls) && /^quote:?$/i.test(flatInner)) {
     return "";
   }
   if (tag === "div" && /^Originally Posted by\b/i.test(flatInner)) {
-    const name = flatInner.replace(/^Originally Posted by\s+/i, "").trim();
-    return "\n" + (name ? `${name} wrote:` : "Quote:") + "\n";
+    return renderQuoteAttribution(flatInner);
+  }
+  if (classes.has("quote_container") || classes.has("bbcode_container")) {
+    return inner;
   }
   if ((tag === "td" || tag === "div") && /\balt2\b/.test(cls)) {
     return quoteBlock(inner);
   }
 
-  if (tag === "blockquote" || /quote/i.test(cls)) {
+  if (tag === "blockquote" || classes.has("quote") || classes.has("quotecontent") || classes.has("bbcode_quote")) {
     return quoteBlock(inner);
   }
 
@@ -105,6 +111,14 @@ function quoteBlock(inner: string): string {
     .map((line) => (line.trim() ? "> " + line.trim() : ">"))
     .join("\n");
   return "\n" + quoted + "\n";
+}
+
+function renderQuoteAttribution(text: string): string {
+  const name = text
+    .replace(/^Originally Posted by\s+/i, "")
+    .replace(/\bView Post\b.*$/i, "")
+    .trim();
+  return "\n" + (name ? `${name} wrote:` : "Quote:") + "\n";
 }
 
 /** Drop vBulletin/vBSEO session params so displayed URLs stay clean. */

@@ -3,7 +3,7 @@ import { useKeyboard } from "@opentui/react";
 import type { VbClient } from "../../vb/client";
 import { errMsg } from "../hooks";
 import { Header, StatusBar } from "../components/chrome";
-import { theme } from "../theme";
+import { theme, fieldThemeProps } from "../theme";
 
 type Mode = "password" | "cookie";
 type Focus = "user" | "pass" | "cookie";
@@ -16,6 +16,7 @@ export function LoginScreen({ client, onAuthed, onBrowseAsGuest }: { client: VbC
   const [focus, setFocus] = useState<Focus>("user");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const fieldColors = fieldThemeProps();
 
   async function submit() {
     if (busy) return;
@@ -61,6 +62,7 @@ export function LoginScreen({ client, onAuthed, onBrowseAsGuest }: { client: VbC
             <>
               <box title="Username" style={{ border: true, height: 3 }}>
                 <input
+                  {...fieldColors}
                   placeholder="your GFY username"
                   focused={focus === "user"}
                   onInput={setUsername}
@@ -69,6 +71,7 @@ export function LoginScreen({ client, onAuthed, onBrowseAsGuest }: { client: VbC
               </box>
               <box title="Password (typed in clear)" style={{ border: true, height: 3 }}>
                 <input
+                  {...fieldColors}
                   placeholder="your password"
                   focused={focus === "pass"}
                   onInput={setPassword}
@@ -81,6 +84,7 @@ export function LoginScreen({ client, onAuthed, onBrowseAsGuest }: { client: VbC
             <>
               <box title="Cookie string" style={{ border: true, height: 3 }}>
                 <input
+                  {...fieldColors}
                   placeholder="bbuserid=..; bbpassword=..; bbsessionhash=.."
                   focused={focus === "cookie"}
                   onInput={setCookie}

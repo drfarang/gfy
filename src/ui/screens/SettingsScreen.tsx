@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useKeyboard } from "@opentui/react";
 import type { AppConfig } from "../../config";
 import { Header, StatusBar } from "../components/chrome";
-import { theme, themeNames } from "../theme";
+import { theme, themeNames, resolveThemeName, fieldThemeProps } from "../theme";
 
 // Editable text fields, in tab order after the theme picker (index 0).
 const TEXT_FIELDS = [
@@ -24,7 +24,7 @@ export function SettingsScreen({
   onSave: (next: AppConfig) => void;
   onCancel: () => void;
 }) {
-  const [themeName, setThemeName] = useState(config.theme);
+  const [themeName, setThemeName] = useState<string>(resolveThemeName(config.theme));
   const [vals, setVals] = useState<Record<TextKey, string>>({
     uploadHost: config.uploadHost,
     uploadDir: config.uploadDir,
@@ -33,6 +33,7 @@ export function SettingsScreen({
   // 0 = theme picker, 1..N = the text fields above.
   const [focus, setFocus] = useState(0);
   const fieldCount = 1 + TEXT_FIELDS.length;
+  const fieldColors = fieldThemeProps();
 
   function cycleTheme(dir: number) {
     const current = Math.max(0, themeNames.indexOf(themeName));
@@ -42,7 +43,7 @@ export function SettingsScreen({
   }
 
   function cancel() {
-    onThemeChange(config.theme);
+    onThemeChange(resolveThemeName(config.theme));
     onCancel();
   }
 
@@ -92,6 +93,7 @@ export function SettingsScreen({
               style={{ border: true, height: 3, borderColor: focus === i + 1 ? theme.accent : theme.border }}
             >
               <input
+                {...fieldColors}
                 value={vals[f.key]}
                 placeholder={f.hint}
                 focused={focus === i + 1}

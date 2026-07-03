@@ -11,7 +11,7 @@ export type ComposeScreenProps = {
   onDone: () => void;
   onCancel: () => void;
 } & (
-  | { mode: "reply"; threadId: number; quoteContext?: QuoteContext }
+  | { mode: "reply"; threadId: number; threadPath?: string; quoteContext?: QuoteContext }
   | { mode: "thread"; forumId: number }
 );
 

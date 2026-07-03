@@ -30,6 +30,8 @@ export class VbClient {
   private session: Session | null;
   /** id -> path (slug url) for forums discovered via forums() */
   private forumPaths = new Map<number, string>();
+  /** id -> canonical vB6 slug path for threads discovered via threads() */
+  private threadPaths = new Map<number, string>();
 
   constructor(config: AppConfig, session?: Session | null) {
     this.jar = new CookieJar(session?.cookies);
@@ -122,23 +124,41 @@ export class VbClient {
       path = this.forumPaths.get(forumId);
     }
     const listUrl = path
-      ? `${path}${path.includes("?") ? "&" : "?"}page=${page}`
+      ? forumPagePath(path, page)
       : `/forumdisplay.php?f=${forumId}&page=${page}`;
     const { html } = await this.http.get(listUrl);
     this.absorb(html);
     const result = parseThreadList(html);
     result.forumId ??= forumId;
-    for (const t of result.items) t.forumId ??= forumId;
+    for (const t of result.items) {
+      t.forumId ??= forumId;
+      if (t.path) this.threadPaths.set(t.id, t.path);
+    }
     return result;
   }
 
-  async thread(threadId: number, page: number | "last" = 1): Promise<Paged<Post>> {
+  async thread(threadId: number, page: number | "last" = 1, explicitPath?: string): Promise<Paged<Post>> {
+    const path = explicitPath || this.threadPaths.get(threadId);
+    if (path) {
+      const basePath = canonicalThreadPath(path);
+      if (page === "last") {
+        const first = await this.loadThreadPage(threadId, basePath);
+        if (first.totalPages <= first.page) return first;
+        return this.loadThreadPage(threadId, `${basePath}/page${first.totalPages}`);
+      }
+      return this.loadThreadPage(threadId, page <= 1 ? basePath : `${basePath}/page${page}`);
+    }
+
     // For "last" we request an absurdly high page; vBulletin clamps to the final
     // page and its "Page X of Y" then reports the real number. (goto=lastpost is
     // not used: vBSEO rewrites it to a "-last-post" URL whose pagenav still reads
     // "Page 1 of N", so we'd wrongly think we were on page 1.)
     const query = page === "last" ? "page=100000" : `page=${page}`;
-    const { html } = await this.http.get(`/showthread.php?t=${threadId}&${query}`);
+    return this.loadThreadPage(threadId, `/showthread.php?t=${threadId}&${query}`);
+  }
+
+  private async loadThreadPage(threadId: number, path: string): Promise<Paged<Post>> {
+    const { html } = await this.http.get(path);
     this.absorb(html);
     const result = parseThread(html);
     result.threadId ??= threadId;
@@ -147,9 +167,10 @@ export class VbClient {
 
   // --- post ---------------------------------------------------------------
 
-  async reply(threadId: number, message: string): Promise<PostResult> {
+  async reply(threadId: number, message: string, explicitPath?: string): Promise<PostResult> {
     // vB6 no longer has /newreply.php; load the thread to get nodeid + securitytoken
-    const page = await this.http.get(`/showthread.php?t=${threadId}`);
+    const threadPath = explicitPath || this.threadPaths.get(threadId);
+    const page = await this.http.get(threadPath ? canonicalThreadPath(threadPath) : `/showthread.php?t=${threadId}`);
     this.absorb(page.html);
     const tokens = parsePostFormTokens(page.html);
     if (!tokens) return { ok: false, error: "Could not load thread for reply tokens - are you logged in?" };
@@ -216,6 +237,42 @@ export class VbClient {
     const token = parseSecurityToken(html);
     if (token && token !== "guest" && this.session) this.session.securityToken = token;
   }
+}
+
+function canonicalThreadPath(path: string): string {
+  let pathname: string;
+  try {
+    pathname = new URL(path, "https://gfy.com").pathname;
+  } catch {
+    pathname = path.split(/[?#]/, 1)[0] || path;
+  }
+  return (pathname.replace(/\/page\d+\/?$/i, "").replace(/\/+$/, "") || "/");
+}
+
+function forumPagePath(path: string, page: number): string {
+  let pathname: string;
+  let search = "";
+  try {
+    const url = new URL(path, "https://gfy.com");
+    pathname = url.pathname;
+    search = url.search;
+  } catch {
+    const [rawPath = path, rawQuery = ""] = path.split("?", 2);
+    pathname = rawPath;
+    search = rawQuery ? `?${rawQuery.split("#", 1)[0]}` : "";
+  }
+
+  // Current vB6 forum routes ignore ?page=N. They page via /pageN while
+  // preserving filter query params after that path segment.
+  if (pathname.startsWith("/forum/")) {
+    const basePath = pathname.replace(/\/page\d+\/?$/i, "").replace(/\/+$/, "") || "/";
+    return `${page <= 1 ? basePath : `${basePath}/page${page}`}${search}`;
+  }
+
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.set("page", String(page));
+  const query = params.toString();
+  return `${pathname || "/"}${query ? `?${query}` : ""}`;
 }
 
 export function interpretPost(res: HttpResponse): PostResult {

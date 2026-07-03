@@ -34,13 +34,31 @@ type FormEncoding = "latin1" | "utf8";
 
 const REDIRECT_STATUS = new Set([301, 302, 303, 307, 308]);
 
-// gfy.com serves ISO-8859-1; decode bytes as latin1 rather than UTF-8.
-function decodeLatin1(buffer: ArrayBuffer): string {
-  return Buffer.from(buffer).toString("latin1");
+// Old GFY/vBulletin pages declared ISO-8859-1, but the vB6 templates currently
+// send valid UTF-8 bytes while still advertising latin1. Prefer UTF-8 when the
+// byte stream is valid, then fall back to latin1 for legacy pages.
+export function decodeHtml(buffer: ArrayBuffer, contentType?: string | null): string {
+  const bytes = Buffer.from(buffer);
+  const charset = contentType?.match(/charset=([^;\s]+)/i)?.[1]?.toLowerCase();
+  if (charset && /utf-?8/.test(charset)) return bytes.toString("utf8");
+
+  const utf8 = tryDecodeUtf8(bytes);
+  if (utf8 != null) return utf8;
+
+  return bytes.toString("latin1");
+}
+
+function tryDecodeUtf8(bytes: Buffer): string | null {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return null;
+  }
 }
 
 export class HttpClient {
-  private lastRequestAt = 0;
+  private nextRequestAt = 0;
+  private throttleQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly opts: HttpClientOptions) {}
 
@@ -80,11 +98,22 @@ export class HttpClient {
 
   private async throttle(): Promise<void> {
     const delay = this.opts.requestDelayMs ?? 0;
-    if (delay > 0) {
-      const wait = this.lastRequestAt + delay - Date.now();
+    if (delay <= 0) return;
+
+    const previous = this.throttleQueue;
+    let release!: () => void;
+    this.throttleQueue = new Promise((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+    try {
+      const wait = this.nextRequestAt - Date.now();
       if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      this.nextRequestAt = Date.now() + delay;
+    } finally {
+      release();
     }
-    this.lastRequestAt = Date.now();
   }
 
   /**
@@ -130,7 +159,7 @@ export class HttpClient {
 
     if (!res) throw new HttpError(0, `No response for ${url}`);
 
-    const html = decodeLatin1(await res.arrayBuffer());
+    const html = decodeHtml(await res.arrayBuffer(), res.headers.get("content-type"));
 
     if (isCloudflareChallenge(res.status, html)) throw new CloudflareChallengeError();
     if (res.status >= 400) throw new HttpError(res.status, `HTTP ${res.status} for ${url}`);

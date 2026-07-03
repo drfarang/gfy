@@ -44,7 +44,7 @@ export function useComposerController(props: ComposeScreenProps) {
     const request = ++quoteRequestRef.current;
     dispatch({ type: "quoteLoadStarted" });
     try {
-      const result = await props.client.thread(props.threadId, page);
+      const result = await props.client.thread(props.threadId, page, props.threadPath);
       if (request !== quoteRequestRef.current) return;
       dispatch({
         type: "quoteLoadSucceeded",
@@ -114,7 +114,7 @@ export function useComposerController(props: ComposeScreenProps) {
     try {
       const result =
         props.mode === "reply"
-          ? await props.client.reply(props.threadId, body)
+          ? await props.client.reply(props.threadId, body, props.threadPath)
           : await props.client.newThread(props.forumId, state.subject.trim() || "(no subject)", body);
       if (result.ok) {
         props.onDone();
