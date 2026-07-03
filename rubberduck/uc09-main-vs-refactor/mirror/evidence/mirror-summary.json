@@ -1,0 +1,11 @@
+{
+  "mode": "rename-refactor",
+  "preserved_contract": "observable-behavior",
+  "verdict": "NOT_EQUIVALENT",
+  "divergence_count": 7,
+  "undecidable_count": 3,
+  "generated_tests": 4,
+  "side_effects_compared": true,
+  "exceptions_compared": true,
+  "confidence": "high for non-equivalence; medium-high for merge safety"
+}
