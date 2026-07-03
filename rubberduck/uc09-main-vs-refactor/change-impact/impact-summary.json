@@ -1,0 +1,19 @@
+{
+  "target": {"type": "branch-delta", "before": "4a8eb495c469dec9b34bc328f1b1e02ac6cdc0cd", "after": "c958da5bb995126f9777bae86c31f0fee9710e33"},
+  "change": {"type": "behavior-and-refactor", "files_changed": 23, "commits": 5},
+  "risk": {"level": "MEDIUM", "score": 62, "confidence": "medium-high", "highest_dimension": "production behavior and network side effects"},
+  "callers": ["App -> useTabs", "ThreadViewScreen -> ImageBlock", "ForumListScreen -> List", "ThreadListScreen -> List/loadThreadListView"],
+  "callees": ["loadThreadListView -> VbClient.threads", "ImageBlock -> fetch/decode/Kitty", "List -> OpenTUI size callback"],
+  "shared_state": ["tab reducer state", "image LRUs and in-flight Maps", "Kitty transmitted/animated ID sets"],
+  "data_flows": ["two thread pages -> ordered deduplicated items", "image URL -> bytes -> decoded frames -> terminal placement", "allocated height -> viewport -> visible rows"],
+  "public_api": {"root_changed": false, "deep_import_risk": true, "breaks": ["useTabs.replace removed", "Stack readonly/non-empty", "List.chromeRows removed"]},
+  "mock_sites": [],
+  "comment_contracts": ["browser-style tab stacks", "two adjacent pages per view", "bounded image memory"],
+  "tests_to_run": ["bun test", "bun run typecheck", "App modifier integration", "second-page failure integration", "real Kitty lifecycle smoke"],
+  "runtime_optimization": ["in-flight image request coalescing", "bounded source/prepared image LRUs"],
+  "change_order": ["add gap tests", "decide deep-import contract", "run real terminal/live forum smokes", "merge existing commit order"],
+  "rollback": ["reverse commit order", "paging: revert 6cd3ac4", "images: revert 285618d", "shortcut: revert 3b7f3d6"],
+  "tool_health": {"ci_before": "phase2-full", "ci_after": "phase2-full", "semantic_load": "100%", "call_chain": "degraded", "runtime": "green"},
+  "unsupported_surfaces": ["real Kitty terminal", "live forum behavior", "external deep importers"],
+  "claims": ["not behaviorally equivalent", "valid internal tab actions preserved", "pixel decode formulas retained", "merge risk medium"]
+}
