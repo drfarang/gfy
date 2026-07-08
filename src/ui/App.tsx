@@ -210,7 +210,9 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           onOpen={(t) => nav.push({ kind: "thread", threadId: t.id, title: t.title, threadPath: t.path })}
           onOpenInTab={(t) => nav.openInTab({ kind: "thread", threadId: t.id, title: t.title, threadPath: t.path })}
           onBack={() => nav.pop()}
-          onNewThread={() => nav.push({ kind: "composeThread", forumId: screen.forumId, title: screen.title })}
+          onNewThread={() =>
+            nav.push({ kind: "composeThread", forumId: screen.forumId, title: screen.title, forumPath: screen.forumPath })
+          }
         />
       );
     case "thread":
@@ -257,6 +259,7 @@ export function App({ config: initialConfig, initialSession }: { config: AppConf
           client={client}
           mode="thread"
           forumId={screen.forumId}
+          forumPath={screen.forumPath}
           title={screen.title}
           upload={upload}
           onDone={() => nav.pop()}

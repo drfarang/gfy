@@ -14,4 +14,4 @@ export type Screen =
   | { kind: "threads"; forumId: number; title: string; forumPath?: string }
   | { kind: "thread"; threadId: number; title: string; threadPath?: string }
   | { kind: "composeReply"; threadId: number; title: string; threadPath?: string; quoteContext?: QuoteContext }
-  | { kind: "composeThread"; forumId: number; title: string };
+  | { kind: "composeThread"; forumId: number; title: string; forumPath?: string };

@@ -12,7 +12,7 @@ export type ComposeScreenProps = {
   onCancel: () => void;
 } & (
   | { mode: "reply"; threadId: number; threadPath?: string; quoteContext?: QuoteContext }
-  | { mode: "thread"; forumId: number }
+  | { mode: "thread"; forumId: number; forumPath?: string }
 );
 
 export type ComposerFocus = "subject" | "body" | "emoji" | "quotes";

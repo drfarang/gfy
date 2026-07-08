@@ -6,11 +6,11 @@ import { useComposerController } from "../hooks/useComposerController";
 import { fieldThemeProps, theme } from "../theme";
 
 export function ComposeScreen(props: ComposeScreenProps) {
-  const { bodyRef, state, setSubject, setQuoteIndex, insertEmoji, insertSelectedQuotes } =
+  const { bodyRef, subjectRef, state, setSubject, setQuoteIndex, insertEmoji, insertSelectedQuotes } =
     useComposerController(props);
   const heading = props.mode === "reply" ? "Reply to: " + props.title : "New thread in: " + props.title;
   const uploadHint = props.upload?.host ? " · drag image / Ctrl+V paste image" : "";
-  const regularHints = `Ctrl+S send${props.mode === "reply" ? " · Ctrl+Q quote" : ""} · Ctrl+E emoji · Esc cancel${
+  const regularHints = `Ctrl+S send${props.mode === "reply" ? " · Ctrl+Q quote" : ""} · Ctrl+E emoji · Ctrl+Y copy · Esc cancel${
     props.mode === "thread" ? " · Tab subject/body" : ""
   }${uploadHint}`;
   const fieldColors = fieldThemeProps();
@@ -24,6 +24,7 @@ export function ComposeScreen(props: ComposeScreenProps) {
           <box title="Subject" style={{ border: true, height: 3 }}>
             <input
               {...fieldColors}
+              ref={subjectRef}
               placeholder="thread title"
               focused={state.focus === "subject"}
               onInput={setSubject}

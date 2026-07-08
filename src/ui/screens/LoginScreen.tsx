@@ -48,7 +48,7 @@ export function LoginScreen({ client, onAuthed, onBrowseAsGuest }: { client: VbC
       setStatus("");
     } else if (n === "tab" && mode === "password") {
       setFocus((f) => (f === "user" ? "pass" : "user"));
-    } else if ((n === "g" || n === "escape") && onBrowseAsGuest) {
+    } else if (((ctrl && n === "g") || n === "escape") && onBrowseAsGuest) {
       onBrowseAsGuest();
     }
   });
@@ -78,7 +78,7 @@ export function LoginScreen({ client, onAuthed, onBrowseAsGuest }: { client: VbC
                   onSubmit={submit}
                 />
               </box>
-              <text fg={theme.dim}>Tab switches fields · Enter signs in · Ctrl+K cookies · g/esc browse as guest</text>
+              <text fg={theme.dim}>Tab switches fields · Enter signs in · Ctrl+K cookies · Ctrl+G/esc browse as guest</text>
             </>
           ) : (
             <>
@@ -91,7 +91,7 @@ export function LoginScreen({ client, onAuthed, onBrowseAsGuest }: { client: VbC
                   onSubmit={submit}
                 />
               </box>
-              <text fg={theme.dim}>Paste cookies from logged-in browser · Enter signs in · Ctrl+K password · g/esc browse as guest</text>
+              <text fg={theme.dim}>Paste cookies from logged-in browser · Enter signs in · Ctrl+K password · Ctrl+G/esc browse as guest</text>
             </>
           )}
         </box>

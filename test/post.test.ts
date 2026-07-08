@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { interpretPost } from "../src/vb/client";
+import { interpretPost, interpretCreateContentResponse } from "../src/vb/client";
 import type { HttpResponse } from "../src/vb/http";
 
 const res = (html: string, finalUrl = "https://www.gfy.com/newreply.php?do=postreply&t=1"): HttpResponse => ({
@@ -40,5 +40,28 @@ describe("interpretPost", () => {
     const r = interpretPost(res(html));
     expect(r.ok).toBe(false);
     expect(r.error).toContain("too short");
+  });
+});
+
+describe("interpretCreateContentResponse", () => {
+  // vB6's /create-content/text/ endpoint (confirmed live against gfy.com) always
+  // returns HTTP 200; success/failure is only distinguishable from the JSON body.
+  const threadUrl = "https://gfy.com/forum/simply-business/fucking-around-business-discussion/1278066-a-i-pics-vids-thread/page165";
+
+  test("treats {nodeId} as success and builds a #post anchor on the thread url", () => {
+    const r = interpretCreateContentResponse(res('{"nodeId":31463266}', threadUrl), threadUrl);
+    expect(r.ok).toBe(true);
+    expect(r.url).toBe(`${threadUrl}#post31463266`);
+  });
+
+  test("treats an errors array as failure (e.g. empty message)", () => {
+    const r = interpretCreateContentResponse(res('{"errors":[["text_required"]],"userid":"38787"}', threadUrl), threadUrl);
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain("text_required");
+  });
+
+  test("treats a non-JSON body as failure rather than throwing", () => {
+    const r = interpretCreateContentResponse(res("<html>unexpected</html>", threadUrl), threadUrl);
+    expect(r.ok).toBe(false);
   });
 });

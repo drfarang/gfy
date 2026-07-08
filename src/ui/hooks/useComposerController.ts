@@ -1,6 +1,6 @@
 import { useCallback, useReducer, useRef } from "react";
-import { useKeyboard } from "@opentui/react";
-import type { TextareaRenderable } from "@opentui/core";
+import { useKeyboard, useRenderer } from "@opentui/react";
+import type { InputRenderable, TextareaRenderable } from "@opentui/core";
 import {
   composerReducer,
   createComposerState,
@@ -13,12 +13,14 @@ import { errMsg } from "../hooks";
 import { useComposerUploads } from "./useComposerUploads";
 
 export function useComposerController(props: ComposeScreenProps) {
+  const renderer = useRenderer();
   const initialQuoteContext = props.mode === "reply" ? props.quoteContext : undefined;
   const [state, dispatch] = useReducer(
     composerReducer,
     createComposerState(props.mode, initialQuoteContext),
   );
   const bodyRef = useRef<TextareaRenderable>(null);
+  const subjectRef = useRef<InputRenderable>(null);
   const quoteCursorRef = useRef(0);
   const quoteRequestRef = useRef(0);
 
@@ -115,7 +117,7 @@ export function useComposerController(props: ComposeScreenProps) {
       const result =
         props.mode === "reply"
           ? await props.client.reply(props.threadId, body, props.threadPath)
-          : await props.client.newThread(props.forumId, state.subject.trim() || "(no subject)", body);
+          : await props.client.newThread(props.forumId, state.subject.trim() || "(no subject)", body, props.forumPath);
       if (result.ok) {
         props.onDone();
         return;
@@ -124,6 +126,20 @@ export function useComposerController(props: ComposeScreenProps) {
     } catch (error) {
       dispatch({ type: "submitFailed", error: errMsg(error) });
     }
+  }
+
+  // Ctrl+C is reserved app-wide to quit (App.tsx), so selection-copy lives on
+  // Ctrl+Y instead. Cmd+C can't be bound here at all - terminals intercept it
+  // for their own native (mouse-drag) selection and never forward it as a key.
+  function copySelection() {
+    const activeRef = state.focus === "subject" ? subjectRef : bodyRef;
+    const text = activeRef.current?.getSelectedText();
+    if (!text) {
+      setStatus("No text selected (Shift+arrows to select).");
+      return;
+    }
+    const copied = renderer.copyToClipboardOSC52(text);
+    setStatus(copied ? "Copied selection to clipboard." : "Terminal doesn't support clipboard copy (OSC 52).");
   }
 
   useKeyboard((key) => {
@@ -145,6 +161,7 @@ export function useComposerController(props: ComposeScreenProps) {
     else if (name === "escape") props.onCancel();
     else if (ctrl && (name === "s" || name === "return" || name === "enter")) void submit();
     else if (ctrl && name === "v") void pasteClipboardImage();
+    else if (ctrl && name === "y") copySelection();
     else if (name === "tab" && props.mode === "thread" && !state.emojiOpen) {
       dispatch({ type: "toggleFormFocus" });
     }
@@ -152,6 +169,7 @@ export function useComposerController(props: ComposeScreenProps) {
 
   return {
     bodyRef,
+    subjectRef,
     state,
     setSubject: (subject: string) => dispatch({ type: "subjectChanged", subject }),
     setQuoteIndex: (index: number) => dispatch({ type: "quoteIndexChanged", index }),

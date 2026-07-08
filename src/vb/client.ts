@@ -176,60 +176,42 @@ export class VbClient {
     if (!tokens) return { ok: false, error: "Could not load thread for reply tokens - are you logged in?" };
 
     const parentId = tokens.extra?.nodeid || String(threadId);
+    const channelId = tokens.extra?.channelid || String(tokens.forumId ?? "");
 
-    // Try vB6 AJAX node save for comments/replies. Payload guessed from platform patterns.
-    const res = await this.http.postForm("/ajax/api/node/save", {
+    // vB6 posts through the SPA's unified content-creation endpoint. Confirmed live
+    // against gfy.com: the reply form posts exactly these fields to this path.
+    const res = await this.http.postForm("/create-content/text/", {
       securitytoken: tokens.securitytoken,
+      text: message,
+      channelid: channelId,
       parentid: parentId,
-      message,
-      rawtext: message,
-      wysiwyg: "0",
-      parseurl: "1",
-      signature: "1",
-      // some installs use these:
-      title: "",
-      htmltext: "",
+      ret: page.finalUrl,
     });
-    // interpret may need tweak; fall back to checking final location or success json-ish
-    if (res.html.includes("nodeId") || /thank|posted|success/i.test(res.html) || res.finalUrl.includes(String(threadId))) {
-      return { ok: true, url: res.finalUrl };
-    }
-    const errors = parseErrors(res.html);
-    if (errors.length) return { ok: false, error: errors.join(" ").slice(0,300) };
-    return { ok: false, error: "Reply may have failed (new platform posting is experimental). Check thread." , url: res.finalUrl };
+    return interpretCreateContentResponse(res, page.finalUrl);
   }
 
-  async newThread(forumId: number, subject: string, message: string): Promise<PostResult> {
-    // For new threads we still need channel; try legacy first (will likely 404) then note limitation.
-    const form = await this.http.get(`/newthread.php?do=newthread&f=${forumId}`).catch(() => null);
-    let html = form?.html ?? "";
-    if (!html) {
-      // fallback: load a known forum page to grab a channelid/security for this forumId
-      // user must have visited threads at least once for path, else fail gracefully
-      html = (await this.http.get("/")).html;
-    }
-    this.absorb(html);
-    const tokens = parsePostFormTokens(html) || { securitytoken: parseSecurityToken(html) || "guest", extra: {} };
+  async newThread(forumId: number, subject: string, message: string, explicitPath?: string): Promise<PostResult> {
+    const forumPath = explicitPath || this.forumPaths.get(forumId);
+    const page = await this.http.get(forumPath || `/forumdisplay.php?f=${forumId}`);
+    this.absorb(page.html);
+    const tokens = parsePostFormTokens(page.html) || { securitytoken: parseSecurityToken(page.html) || "guest", extra: {} };
     if (!tokens.securitytoken || tokens.securitytoken === "guest") {
       return { ok: false, error: "Cannot start thread without a valid security token (log in first)." };
     }
+    const channelId = tokens.extra?.channelid || String(forumId);
 
-    const res = await this.http.postForm("/ajax/api/node/save", {
+    // Same /create-content/text/ endpoint as reply() (verified). Live testing showed
+    // the server rejects `subject` with a `title_required` error - the node-creation
+    // endpoint wants the thread title under the field name `title`.
+    const res = await this.http.postForm("/create-content/text/", {
       securitytoken: tokens.securitytoken,
-      channelid: String(forumId),
-      subject,
-      message,
-      rawtext: message,
-      wysiwyg: "0",
-      parseurl: "1",
-      signature: "1",
+      text: message,
+      title: subject,
+      channelid: channelId,
+      parentid: channelId,
+      ret: page.finalUrl,
     });
-    if (/thank you|posted|success|nodeid/i.test(res.html) || res.finalUrl.includes("/forum/")) {
-      return { ok: true, url: res.finalUrl };
-    }
-    const errors = parseErrors(res.html);
-    if (errors.length) return { ok: false, error: errors.join(" ").slice(0,300) };
-    return { ok: false, error: "New thread posting experimental on vB6 update; reply may work better." };
+    return interpretCreateContentResponse(res, page.finalUrl);
   }
 
   /** Capture a fresh security token from any authenticated page. */
@@ -273,6 +255,28 @@ function forumPagePath(path: string, page: number): string {
   params.set("page", String(page));
   const query = params.toString();
   return `${pathname || "/"}${query ? `?${query}` : ""}`;
+}
+
+/**
+ * vB6's /create-content/text/ replies with JSON, not HTML - confirmed live:
+ * success is `{"nodeId":12345}`, failure is `{"errors":[["text_required"]],"userid":"..."}`.
+ * Both cases return HTTP 200, so the JSON body is the only signal.
+ */
+export function interpretCreateContentResponse(res: HttpResponse, threadUrl: string): PostResult {
+  let parsed: { nodeId?: number; errors?: unknown[] };
+  try {
+    parsed = JSON.parse(res.html);
+  } catch {
+    return { ok: false, error: "Unexpected response from server.", url: res.finalUrl };
+  }
+  if (parsed.errors?.length) {
+    const codes = parsed.errors.map((e) => String(Array.isArray(e) ? e[0] : e));
+    return { ok: false, error: codes.join(", ") };
+  }
+  if (parsed.nodeId) {
+    return { ok: true, url: `${threadUrl}#post${parsed.nodeId}` };
+  }
+  return { ok: true, url: res.finalUrl };
 }
 
 export function interpretPost(res: HttpResponse): PostResult {
